@@ -1,0 +1,31 @@
+[build-system]
+requires = [
+    "setuptools>=80.9.0,<82",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "docassemble.MACaregiverAuthorization"
+version = "0.0.1"
+description = "A docassemble project for MA Caregiver Authorization."
+readme = "README.md"
+authors = [
+    { name = "Katelyn Pereira-Perez", email = "katelyn.pereira-perez@su.suffolk.edu" },
+]
+dependencies = [
+    "docassemble.ALAnyState @ git+https://github.com/SuffolkLITLab/docassemble-ALAnyState@main",
+    "docassemble.AssemblyLine @ git+https://github.com/SuffolkLITLab/docassemble-AssemblyLine.git@main",
+    "docassemble.MassAccess @ git+https://github.com/SuffolkLITLab/docassemble-MassAccess@main",
+]
+license = "MIT"
+license-files = [
+    "LICENSE",
+]
+
+[project.urls]
+Homepage = "https://docassemble.org"
+
+[tool.setuptools.packages.find]
+where = [
+    ".",
+]

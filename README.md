@@ -1,2 +1,3 @@
-# docassemble-MACaregiverAuthorization
-A docassemble project for MA Caregiver Authorization.
+# docassemble.MACaregiverAuthorization
+
+A docassemble extension.
