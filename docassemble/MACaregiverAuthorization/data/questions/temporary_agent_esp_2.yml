@@ -202,7 +202,9 @@ subquestion: |
   * A court order says you cannot give these rights and duties to someone else.
   * A court ended (took away) your parental rights.
   * You signed papers giving up your parental rights.
-yesno: parent_has_court_order_or_lost_rights
+fields:
+  - no label: parent_has_court_order_or_lost_rights
+    datatype: yesnoradio
 ---
 id: ineligible to complete screen
 event: ineligible_to_complete_screen
@@ -239,7 +241,9 @@ fields:
 id: agent statements
 question: |
   Is the agent 18 years old or older?
-yesno: agent_is_18_or_older
+fields:
+  - no label: agent_is_18_or_older
+    datatype: yesnoradio
 ---
 id: agent too young screen
 event: agent_too_young_screen
@@ -330,7 +334,9 @@ question: |
   Did the other parent agree to you choosing an agent?
 subquestion: |
   If you know who your child’s other parent is, tell us if that parent agreed to the agent or agents.
-yesno: non_appointing_parent_has_given_consent
+fields:
+  - no label: non_appointing_parent_has_given_consent
+    datatype: yesnoradio
 ---
 # The PDF has a separate box for "has not given consent". It is always the
 # opposite of the answer above, so it is filled in automatically.
