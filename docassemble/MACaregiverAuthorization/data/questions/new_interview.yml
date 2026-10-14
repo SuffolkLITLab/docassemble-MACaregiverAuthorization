@@ -1,0 +1,241 @@
+metadata:
+  title: New interview
+---
+id: question_34e99166
+question: "hello"
+---
+objects:
+  - Temporary_Agent_Esp_2: ALDocument.using(filename="temporary_agent_esp", title=str(Temporary_Agent_Esp_2_attachment_title), enabled=True, has_addendum=False)
+---
+template: temporary_agent_esp_attachment_title
+content: |
+  Temporary agent esp
+---
+# Each attachment defines a key in an ALDocument. We use `i` as the placeholder here so the
+# same template is used for "preview" and "final" keys, and logic in the template checks
+# the value of `i` to show or hide the user's signature
+attachment:
+  name: temporary agent esp
+  filename: temporary_agent_esp
+  variable name: Temporary_Agent_Esp_2[i]
+  skip undefined: True
+  pdf template file: Temporary_Agent_Esp_2.pdf
+  fields:
+      - "user1_name": ${ users[0] }
+      - "user1_address": ${ user1_address }
+      - "user1_status_parent": ${ user1_status['parent'] }
+      - "user1_status_legal_guardian": ${ user1_status['legal_guardian'] }
+      - "user1_status_legal_custodian": ${ user1_status['legal_custodian'] }
+      - "temp_agent": ${ temp_agent }
+      - "temp_agent_address": ${ temp_agent_address }
+      - "child1_name": ${ children[0] }
+      - "child2_name": ${ children.item(1) }
+      - "child2_birth_date": ${ child2_birth_date.format() }
+      - "child1_birth_date": ${ child1_birth_date.format() }
+      - "child3_name": ${ children.item(2) }
+      - "child3_birth_date": ${ child3_birth_date.format() }
+      - "child4_name": ${ children.item(3) }
+      - "child4_birth_date": ${ child4_birth_date.format() }
+      - "prohibitive_acts": ${ prohibitive_acts }
+      - "optional_agent": ${ optional_agent }
+      - "optional_agent_address": ${ optional_agent_address }
+      - "non_appointing_parent_has_given_consent": ${ non_appointing_parent_has_given_consent }
+      - "non_appointing_parent_has_not_given_consent": ${ non_appointing_parent_has_not_given_consent }
+      - "non_appointing_parent_deceased": ${ non_appointing_parent['deceased'] }
+      - "non_appointing_parent_whereabouts_unknown": ${ non_appointing_parent['whereabouts_unknown'] }
+      - "non_appointing_parent_unwilling": ${ non_appointing_parent['unwilling'] }
+      - "non_appointing_parent_unable": ${ non_appointing_parent['unable'] }
+      - "user1_signature": ${ users[0].signature }
+      - "user1_printed_name": ${ user1_printed_name }
+      - "user1_phone_number": ${ users[0].phone_number }
+      - "temp_agent_acknowledgement": ${ temp_agent_acknowledgement }
+      - "temp_agent_signature": ${ temp_agent[0].signature }
+      - "temp_agent_printed_name": ${ temp_agent_printed_name }
+      - "temp_agent_phone_number": ${ temp_agent[0].phone_number }
+      - "temp_agent_date": ${ temp_agent_date.format() }
+      - "optional_agent_name_acknowledgment": ${ optional_agent_name_acknowledgment }
+      - "optional_agent_signature": ${ optional_agent[0].signature }
+      - "optional_agent_printed_name": ${ optional_agent_printed_name }
+      - "optional_agent_phone_number": ${ optional_agent[0].phone_number }
+      - "optional_agent_date": ${ optional_agent_date.format() }
+      - "other_parent": ${ other_parent }
+      - "other_parent_address": ${ other_parent_address }
+      - "other_temp_agent_name": ${ other_temp_agent_name }
+      - "other_optional_agent_name": ${ other_optional_agent_name }
+      - "other_parent_date": ${ other_parent_date.format() }
+      - "other_parent_signature": ${ other_parent[0].signature }
+      - "other_parent_name": ${ other_parent[0] }
+      - "other_parent_phone_number": ${ other_parent[0].phone_number }
+---
+objects:
+  - children: ALPeopleList.using(there_are_any=True)
+  - optional_agent: ALPeopleList.using(ask_number=True,target_number=1)
+  - other_parent: ALPeopleList.using(ask_number=True,target_number=1)
+  - temp_agent: ALPeopleList.using(ask_number=True,target_number=1)
+  - users: ALPeopleList.using(ask_number=True,target_number=1)
+---
+id: User1
+question: |
+  User1
+fields:
+  - "User1 address": user1_address
+    maxlength: 32
+  - "User1 status": user1_status
+    datatype: checkboxes
+    choices:
+      - Parent: parent
+      - Legal guardian: legal_guardian
+      - Legal custodian: legal_custodian
+---
+id: Temp agent address
+question: |
+  Temp agent address
+fields:
+  - "Temp agent address": temp_agent_address
+    maxlength: 30
+  - "Date of child2 birth": child2_birth_date
+    datatype: date
+---
+id: Date of child1 birth
+question: |
+  Date of child1 birth
+fields:
+  - "Date of child1 birth": child1_birth_date
+    datatype: date
+  - "Date of child3 birth": child3_birth_date
+    datatype: date
+---
+id: Date of child4 birth
+question: |
+  Date of child4 birth
+fields:
+  - "Date of child4 birth": child4_birth_date
+    datatype: date
+  - "Prohibitive acts": prohibitive_acts
+    input type: area
+    maxlength: 156
+---
+id: Optional agent address
+question: |
+  Optional agent address
+fields:
+  - "Optional agent address": optional_agent_address
+    maxlength: 27
+---
+id: Non appointing parent
+question: |
+  Non appointing parent
+fields:
+  - "Non appointing parent has given consent": non_appointing_parent_has_given_consent
+    datatype: yesno
+  - "Non appointing parent has not given consent": non_appointing_parent_has_not_given_consent
+    datatype: yesno
+  - "Non appointing parent": non_appointing_parent
+    datatype: checkboxes
+    choices:
+      - Deceased: deceased
+      - Whereabouts unknown: whereabouts_unknown
+      - Unwilling: unwilling
+      - Unable: unable
+---
+id: User1 printed name
+question: |
+  User1 printed name
+fields:
+  - "User1 printed name": user1_printed_name
+    maxlength: 32
+---
+id: Temp agent
+question: |
+  Temp agent
+fields:
+  - "Temp agent acknowledgement": temp_agent_acknowledgement
+    maxlength: 32
+  - "Temp agent printed name": temp_agent_printed_name
+    maxlength: 33
+  - "Date of temp agent": temp_agent_date
+    datatype: date
+---
+id: Optional agent
+question: |
+  Optional agent
+fields:
+  - "Optional agent name acknowledgment": optional_agent_name_acknowledgment
+    maxlength: 31
+  - "Optional agent printed name": optional_agent_printed_name
+    maxlength: 34
+  - "Date of optional agent": optional_agent_date
+    datatype: date
+---
+id: Other
+question: |
+  Other
+fields:
+  - "Other parent address": other_parent_address
+    maxlength: 31
+  - "Other temp agent name": other_temp_agent_name
+    maxlength: 27
+---
+id: Other 2
+question: |
+  Other 2
+fields:
+  - "Other optional agent name": other_optional_agent_name
+    maxlength: 32
+  - "Date of other parent": other_parent_date
+    datatype: date
+---
+objects:
+  - temporary_agent_esp_2_next_steps: ALDocument.using(filename="temporary_agent_esp_2_next_steps", title=str(temporary_agent_esp_2_next_steps_attachment_title), enabled=True, has_addendum=False)
+---
+template: temporary_agent_esp_2_next_steps_attachment_title
+content: |
+  Temporary agent ESP 2 next steps
+---
+# ALWeaver DOCX template field manifest: ["al_next_steps_document_title", "al_next_steps_enabled", "al_next_steps_generate_qr_code", "al_next_steps_help_organization", "al_next_steps_help_url", "al_next_steps_intro_prompt", "al_next_steps_what_can_decision_maker_do", "al_next_steps_what_happens_if_i_win", "al_next_steps_what_happens_next", "alt_text", "p", "width"]
+# Each attachment defines a key in an ALDocument. We use `i` as the placeholder here so the
+# same template is used for "preview" and "final" keys, and logic in the template checks
+# the value of `i` to show or hide the user's signature
+attachment:
+  name: temporary agent esp 2 next steps
+  filename: temporary_agent_esp_2_next_steps
+  variable name: temporary_agent_esp_2_next_steps[i]
+  skip undefined: True
+  docx template file: temporary_agent_esp_2_next_steps.docx
+  tagged pdf: True
+---
+id: Al next steps
+question: |
+  Al next steps
+fields:
+  - "Al next steps intro prompt": al_next_steps_intro_prompt
+  - "Al next steps document title": al_next_steps_document_title
+  - "Al next steps enabled": al_next_steps_enabled
+    datatype: yesno
+  - "Al next steps what happens next": al_next_steps_what_happens_next
+    datatype: yesno
+  - "Al next steps what can decision maker do": al_next_steps_what_can_decision_maker_do
+    datatype: yesno
+  - "Al next steps what happens if i win": al_next_steps_what_happens_if_i_win
+---
+id: Al next steps 2
+question: |
+  Al next steps 2
+fields:
+  - "Al next steps help organization": al_next_steps_help_organization
+  - "Al next steps help url": al_next_steps_help_url
+  - "Al next steps generate qr code": al_next_steps_generate_qr_code
+    datatype: yesno
+---
+id: P
+question: |
+  P
+fields:
+  - "P": p
+  - "Width": width
+---
+id: Alt text
+question: |
+  Alt text
+fields:
+  - "Alt text": alt_text

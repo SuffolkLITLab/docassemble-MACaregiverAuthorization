@@ -1,0 +1,813 @@
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ALAnyState:any_state.yml
+---
+metadata:
+  title: >-
+    Temporary Agent Esp
+  short title: >-
+    Temporary Agent Esp
+  description: |-
+    This form allows a parent or guardian to appoint a temporary agent to make decisions regarding the care, custody, or property of their minor child. It ensures that the appointed agent can act in the child's best interests when the parent is unavailable.
+  can_I_use_this_form: |
+    If you are a parent or legal guardian and need someone to make decisions for your child temporarily, this form is for you. It allows you to appoint a trusted individual to act on your behalf in specific situations.
+  before_you_start: |
+    ### Before you get started
+    - Ensure you have the names and birthdates of the children involved.
+    - Decide who you want to appoint as the temporary agent.
+
+    ### When you are finished
+    - Sign the form in the presence of witnesses.
+    - Provide a copy to the appointed agent and keep one for your records.
+  when_you_are_finished: |
+    After you complete and sign the form, make sure to give a copy to the temporary agent. It's also a good idea to inform any relevant parties about this appointment. Keep a copy for your own records.
+  efiling_enabled: False
+  integrated_efiling: False
+  integrated_email_filing: False
+  requires_notarization: False
+  unlisted: False
+  landing_page_url: >-
+    https://courtformsonline.org/
+  maturity: production
+  estimated_completion_minutes: ""
+  estimated_completion_delta: ""
+  LIST_topics:
+    - "CO-00-00-00-00"
+  tags:
+    - "CO-00-00-00-00"
+  authors:
+    - Court Forms Online
+  original_form: []
+  original_form_published_on: ""
+  allowed_courts: []
+  typical_role: "unknown"
+  al_weaver_version: "2.3.1"
+  generated_on: "2026-09-29"
+  languages:
+    - en
+  jurisdiction: "NAM-US"
+  review_date: 2026-09-29
+  form_titles:
+    - Temporary Agent Esp
+  form_numbers: []
+  update_notes: ""
+---
+code: |
+  # This controls the default country and list of states in address field questions
+  AL_DEFAULT_COUNTRY = "US"
+---
+code: |
+  # This controls the default state in address field questions
+  AL_DEFAULT_STATE = ""
+---
+code: |
+  github_repo_name = 'docassemble-TemporaryAgentEsp'
+---
+template: interview_short_title
+content: |
+  Appoint a temporary agent for your child
+---
+code: |
+  al_form_type = "other_form"
+---
+id: alweaver assemblyline settings
+initial: True
+code: |
+  # These exact-name variables drive the reusable next-steps DOCX shell and
+  # are editable in Weaver's AssemblyLine settings panel.
+  al_next_steps_enabled = True
+  al_next_steps_intro_prompt = 'Appoint a temporary agent for your child'
+  al_next_steps_title = 'Temporary Agent Esp'
+  al_next_steps_document_title = 'Appointment'
+  al_next_steps_document_purpose = 'authorization'
+  al_next_steps_help_organization = ''
+  al_next_steps_help_url = ''
+  al_next_steps_generate_qr_code = False
+  al_next_steps_what_happens_next = "After you complete and sign the form, make sure to give a copy to the temporary agent. It's also a good idea to inform any relevant parties about this appointment. Keep a copy for your own records."
+  al_next_steps_what_can_decision_maker_do = "The temporary agent can make decisions related to the care and custody of your child, except for certain restricted actions like consenting to marriage or adoption. It's important that they understand the limitations outlined in the form."
+  al_next_steps_what_happens_if_i_win = "If the temporary agent successfully manages the responsibilities, they will help ensure your child's needs are met while you are unavailable. This arrangement can provide peace of mind knowing your child is cared for by someone you trust."
+---
+objects:
+  - users: ALPeopleList.using(ask_number=True, target_number=1)
+  - children: ALPeopleList.using(there_are_any=True)
+  - temp_agent: ALIndividual
+  - optional_agent: ALIndividual
+  - nonappointing_parent: ALIndividual
+---
+sections:
+  - appointing_party: Appointing Party
+  - agents_and_contacts: Agents & Contacts
+  - children_and_consent: Children & Consent
+  - limitations: Prohibited Acts & Limits
+  - review_and_sign: Review & Sign
+  - review_temporary_agent_esp: Review your answers
+---
+#################### Interview order #####################
+id: interview_order_temporary_agent_esp
+mandatory: True
+code: |
+  al_intro_screen
+  temporary_agent_esp_intro
+
+  # 1. Appointing party: name, address, parent status
+  nav.set_section("appointing_party")
+  users.gather()
+  users[0].name.first
+  user1_status_to_child
+
+  # 2. Children: name + birth date, then "another child?" (asked at most 3 times)
+  nav.set_section("children_and_consent")
+  children.gather()
+
+  # 3. Temporary agent, then optional agent
+  nav.set_section("agents_and_contacts")
+  temp_agent.name.first
+  want_optional_agent
+  if want_optional_agent:
+    optional_agent.name.first
+
+  # 4. Prohibited acts
+  nav.set_section("limitations")
+  set_progress(36)
+  temp_agent_prohibitive_acts
+
+  # 5. Other parent's consent
+  nav.set_section("children_and_consent")
+  nonappointing_parent_consent
+  if nonappointing_parent_consent:
+    nonappointing_parent.name.first
+    nonappointing_temp_agent
+    if want_optional_agent:
+      nonappointing_optional_agent
+  else:
+    nonappointing_parent_status
+
+  # 6. Are the agents with you? Acknowledgments + signatures
+  nav.set_section("review_and_sign")
+  parties_available
+  if parties_available:
+    temp_agent_printed_name
+    temp_agent.signature
+    if want_optional_agent:
+      optional_agent_available
+      if optional_agent_available:
+        optional_agent_printed_name
+        optional_agent.signature
+
+  # 7. Preview, then the appointing party signs
+  temporary_agent_esp_preview_question
+  users[0].signature
+
+  store_variables_snapshot(
+      persistent=True,
+      data={
+          "zip": showifdef("users[0].address.zip"),
+          "reached_interview_end": True,
+      },
+  )
+  set_progress(100)
+  temporary_agent_esp_download
+---
+id: temporary_agent_authorization
+continue button field: temporary_agent_esp_intro
+question: "Temporary Agent Authorization"
+subquestion: |2-
+  ### Why should I fill out a Temporary Agent Authorization?
+  * A Temporary Agent Authorization gives a caregiver the power and responsibility
+    to make decisions for your child's healthcare, education, property and finances.
+  * The Agent cannot give permission for your child to marry or be adopted.
+  * The authorization gives the agent the power to make decisions in your child’s life for up to 60 days after you are detained or unavailable.
+  * You have the right to end the authorization at any time.
+  * After 60 days, you can renew the authorization, but you must complete a new form.
+
+  ### Before you get started
+  - Ensure you have the names and birthdates of the children involved.
+  - Decide who you want to appoint as the temporary agent.
+  - You do not have to put all your children on one form. You can fill out a form for each child. Each child needs their own form if they have different caregivers or parents.
+
+  ### What you will need
+  * You will need 2 witnesses to sign the form with you.
+  * The agent must sign the form.
+  * You can add a second person to the form, in case the person you picked to be Temporary Agent is not available.
+  * You may need the other parent of your child to sign the form if you know where they are and if they are able and willing to provide care.
+
+  ### When you are finished
+  - Sign the form in the presence of witnesses.
+  - Provide a copy to the appointed agent and keep one for your records.
+
+  If you are a parent or legal guardian and need someone to make decisions for your child temporarily, this form is for you. It allows you to appoint a trusted individual to act on your behalf in specific situations.
+---
+id: appointing party information
+sets:
+  - users[0].name.first
+  - users[0].name.last
+  - users[0].address.address
+  - users[0].address.city
+  - users[0].address.state
+  - users[0].address.zip
+  - users[0].phone_number
+  - user1_status_to_child
+question: |
+  Your information
+subquestion: |
+  You are the "appointing party."
+fields:
+  - code: |
+      users[0].name_fields()
+  - code: |
+      users[0].address_fields()
+  - Phone number: users[0].phone_number
+    datatype: al_international_phone
+  - Your relationship to the child: user1_status_to_child
+    datatype: dropdown
+    choices:
+      - Parent: parent
+      - Legal guardian: legal guardian
+      - Legal custodian: legal custodian
+---
+id: children names and birth dates
+sets:
+  - children[i].name.first
+  - children[i].name.last
+  - children[i].name.middle
+  - children[i].name.suffix
+  - children[i].birthdate
+question: |
+  % if i == 0:
+  Tell us about your child
+  % else:
+  Tell us about your ${ ordinal(i) } child
+  % endif
+fields:
+  - code: |
+      children[i].name_fields()
+  - Birth date: children[i].birthdate
+    datatype: date
+---
+id: another child
+question: |
+  Do you have another child to add?
+yesno: children.there_is_another
+---
+# Must come AFTER the question above. The PDF has room for 4 children, so
+# "another child?" is asked after child 1, 2 and 3 only (3 times in total).
+code: |
+  if len(children) >= 4:
+    children.there_is_another = False
+---
+id: temporary agent info
+sets:
+  - temp_agent.name.first
+  - temp_agent.name.last
+  - temp_agent.address.address
+  - temp_agent.address.city
+  - temp_agent.address.state
+  - temp_agent.address.zip
+question: |
+  Who is your temporary agent?
+fields:
+  - code: |
+      temp_agent.name_fields()
+  - code: |
+      temp_agent.address_fields()
+---
+id: want optional agent
+question: |
+  Do you want to name an optional (backup) agent?
+subquestion: |
+  This person can act if your temporary agent is not available.
+yesno: want_optional_agent
+---
+id: optional agent info
+sets:
+  - optional_agent.name.first
+  - optional_agent.name.last
+  - optional_agent.address.address
+  - optional_agent.address.city
+  - optional_agent.address.state
+  - optional_agent.address.zip
+question: |
+  Who is your optional agent?
+fields:
+  - code: |
+      optional_agent.name_fields()
+  - code: |
+      optional_agent.address_fields()
+---
+id: prohibited acts
+question: |
+  Prohibited acts
+subquestion: |
+  List any acts your agent is NOT allowed to do.
+fields:
+  - Prohibited acts: temp_agent_prohibitive_acts
+    input type: area
+    required: False
+---
+id: nonappointing parent consent
+question: |
+  Has the other parent given consent?
+yesno: nonappointing_parent_consent
+---
+id: nonappointing parent status
+question: |
+  Why was the other parent's consent not obtained?
+subquestion: |
+  The other parent does not have to consent if one of these is true.
+field: nonappointing_parent_status
+choices:
+  - Deceased: deceased
+  - Whereabouts unknown: whereabouts unknown
+  - Unwilling to provide care for the child: unwilling
+  - Unable to provide care for the child: unable
+---
+id: nonappointing parent info
+sets:
+  - nonappointing_parent.name.first
+  - nonappointing_parent.name.last
+  - nonappointing_parent.address.address
+  - nonappointing_parent.address.city
+  - nonappointing_parent.address.state
+  - nonappointing_parent.address.zip
+  - nonappointing_parent.phone_number
+question: |
+  Other parent's information
+fields:
+  - code: |
+      nonappointing_parent.name_fields()
+  - code: |
+      nonappointing_parent.address_fields()
+  - Phone number: nonappointing_parent.phone_number
+    datatype: al_international_phone
+---
+id: nonappointing temp agent
+question: |
+  Who does the other parent designate as temporary agent?
+fields:
+  - Temporary agent: nonappointing_temp_agent
+    default: ${ temp_agent }
+---
+id: nonappointing optional agent
+question: |
+  Who does the other parent designate as optional agent?
+fields:
+  - Optional agent: nonappointing_optional_agent
+    default: ${ optional_agent }
+---
+id: parties available
+question: |
+  Are the people you named with you right now?
+subquestion: |
+  If they are, they can fill in their acknowledgment and sign on this device.
+  If not, they can sign the printed form later.
+yesno: parties_available
+---
+id: temp agent acknowledgment
+question: |
+  Temporary agent acknowledgment
+subquestion: |
+  Please hand the device to ${ temp_agent }.
+fields:
+  - Printed name: temp_agent_printed_name
+    default: ${ temp_agent }
+  - Phone number: temp_agent.phone_number
+    datatype: al_international_phone
+  - Date: temp_agent_date
+    datatype: date
+    default: ${ today() }
+---
+id: temp agent signature
+question: |
+  Temporary agent signature
+signature: temp_agent.signature
+under: |
+  ${ temp_agent_printed_name }
+---
+id: optional agent available
+question: |
+  Is the optional agent with you right now?
+yesno: optional_agent_available
+---
+id: optional agent acknowledgment
+question: |
+  Optional agent acknowledgment
+subquestion: |
+  Please hand the device to ${ optional_agent }.
+fields:
+  - Printed name: optional_agent_printed_name
+    default: ${ optional_agent }
+  - Phone number: optional_agent.phone_number
+    datatype: al_international_phone
+  - Date: optional_agent_date
+    datatype: date
+    default: ${ today() }
+---
+id: optional agent signature
+question: |
+  Optional agent signature
+signature: optional_agent.signature
+under: |
+  ${ optional_agent_printed_name }
+---
+id: appointing party signature
+question: |
+  Sign your form
+signature: users[0].signature
+under: |
+  ${ users[0] }
+---
+id: preview temporary_agent_esp
+question: |
+  Preview your form before you sign it
+subquestion: |
+  Here is a preview of the form you will sign on the next page.
+
+  ${ al_recipient_bundle.as_pdf(key='preview') }
+
+  Open the form preview in a new tab. Use the "Edit answers" button to edit your
+  answers.
+
+  ${ action_button_html(url_action('review_temporary_agent_esp'), label=word('Edit answers'), color='info') }
+
+  Return to this interview tab to continue and sign your form.
+continue button field: temporary_agent_esp_preview_question
+---
+id: temporary agent esp review screen
+event: review_temporary_agent_esp
+question: |
+  Review your answers
+review:
+  - Edit: users[0].name.first
+    button: |
+      **Your information**
+
+      ${ users[0] }, ${ users[0].address.on_one_line() }
+
+      Relationship to child: ${ showifdef('user1_status_to_child') }
+  - Edit: children.revisit
+    button: |
+      **Children**
+
+      % for item in children:
+        * ${ item }, born ${ showifdef('item.birthdate') }
+      % endfor
+  - Edit: temp_agent.name.first
+    button: |
+      **Temporary agent**
+
+      ${ temp_agent }, ${ temp_agent.address.on_one_line() }
+  - Edit: want_optional_agent
+    button: |
+      **Optional agent**
+
+      % if want_optional_agent:
+      ${ optional_agent }, ${ optional_agent.address.on_one_line() }
+      % else:
+      None
+      % endif
+  - Edit: temp_agent_prohibitive_acts
+    button: |
+      **Prohibited acts**
+
+      ${ single_paragraph(temp_agent_prohibitive_acts) if defined('temp_agent_prohibitive_acts') else '' }
+  - Edit: nonappointing_parent_consent
+    button: |
+      **Other parent consent**
+
+      Consent given: ${ yesno(nonappointing_parent_consent) }
+---
+id: edit children
+continue button field: children.revisit
+question: |
+  Edit children
+subquestion: |
+  ${ children.table }
+
+  ${ children.add_action() }
+---
+table: children.table
+rows: children
+columns:
+  - Name: |
+      row_item.name_full() if defined("row_item.name.first") else ""
+  - Birth date: |
+      row_item.birthdate.format() if defined("row_item.birthdate") else ""
+edit:
+  - name.first
+  - birthdate
+confirm: True
+---
+id: download temporary_agent_esp
+event: temporary_agent_esp_download
+question: |
+  All done
+subquestion: |
+  % if defined("users[0]"):
+  Thank you ${ users }. Your form is ready to download and deliver.
+  % else:
+  Thank you. Your form is ready to download and deliver.
+  % endif
+
+  Use the options on this page to view, download and send your form. Use the
+  "Edit answers" button to fix any mistakes.
+
+  ${ action_button_html(url_action('review_temporary_agent_esp'), label=word('Edit answers'), color='info') }
+
+  ${ al_user_bundle.download_list_html() }
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+progress: 100
+---
+# ALDocument objects specify the metadata for each template
+objects:
+  - temporary_agent_esp_Post_interview_instructions: ALDocument.using(filename="temporary_agent_esp_next_steps.docx", title=str(temporary_agent_esp_Post_interview_instructions_title), enabled=True, has_addendum=False)
+  - temporary_agent_esp_attachment: ALDocument.using(filename="temporary_agent_esp", title=str(temporary_agent_esp_attachment_title), enabled=True, has_addendum=False)
+---
+# Bundles group the ALDocuments into separate downloads, such as for court and for the user
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[temporary_agent_esp_Post_interview_instructions, temporary_agent_esp_attachment, Temporary_Agent_Esp_2, temporary_agent_esp_2_next_steps], filename="temporary_agent_esp", enabled=True, title=str(al_user_bundle_title))
+  - al_recipient_bundle: ALDocumentBundle.using(elements=[temporary_agent_esp_attachment, Temporary_Agent_Esp_2, temporary_agent_esp_2_next_steps], filename="temporary_agent_esp", enabled=True, title=str(al_recipient_bundle_title))
+---
+template: temporary_agent_esp_Post_interview_instructions_title
+content: |
+  Instructions
+---
+template: temporary_agent_esp_attachment_title
+content: |
+  Temporary Agent Esp
+---
+template: al_user_bundle_title
+content: |
+  All forms to download for your records
+---
+template: al_recipient_bundle_title
+content: |
+  All forms to file
+---
+# Each attachment defines a key in an ALDocument. We use `i` as the placeholder here so the
+# same template is used for "preview" and "final" keys, and logic in the template checks
+# the value of `i` to show or hide the user's signature
+attachment:
+  name: Post-interview-Instructions
+  filename: temporary_agent_esp_next_steps
+  docx template file: temporary_agent_esp_next_steps.docx
+  variable name: temporary_agent_esp_Post_interview_instructions[i]
+  skip undefined: True
+  tagged pdf: True
+---
+attachment:
+  name: temporary agent esp
+  filename: temporary_agent_esp
+  variable name: temporary_agent_esp_attachment[i]
+  skip undefined: True
+  pdf template file: Temporary_Agent_Esp.pdf
+  fields:
+      # ---------- Page 1 ----------
+      - "user1_name": ${ users[0] }
+      - "user1_address": ${ users[0].address.on_one_line() }
+      - "user1_status_parent": ${ 'Yes' if user1_status_to_child == 'parent' else 'Off' }
+      - "user1_status_legal_guardian": ${ 'Yes' if user1_status_to_child == 'legal guardian' else 'Off' }
+      - "user1_status_legal_custodian": ${ 'Yes' if user1_status_to_child == 'legal custodian' else 'Off' }
+      - "temp_agent": ${ temp_agent }
+      - "temp_agent_address": ${ temp_agent.address.on_one_line() }
+      - "child1_name": ${ children[0] if len(children) > 0 else '' }
+      - "child1_birth_date": ${ children[0].birthdate.format() if len(children) > 0 else '' }
+      - "child2_name": ${ children[1] if len(children) > 1 else '' }
+      - "child2_birth_date": ${ children[1].birthdate.format() if len(children) > 1 else '' }
+      - "child3_name": ${ children[2] if len(children) > 2 else '' }
+      - "child3_birth_date": ${ children[2].birthdate.format() if len(children) > 2 else '' }
+      - "child4_name": ${ children[3] if len(children) > 3 else '' }
+      - "child4_birth_date": ${ children[3].birthdate.format() if len(children) > 3 else '' }
+      - "prohibitive_acts": ${ showifdef('temp_agent_prohibitive_acts') }
+      - "optional_agent": ${ optional_agent if want_optional_agent else '' }
+      - "optional_agent_address": ${ optional_agent.address.on_one_line() if want_optional_agent else '' }
+      # ---------- Page 2 ----------
+      - "non_appointing_parent_has_given_consent": ${ 'Yes' if nonappointing_parent_consent else 'Off' }
+      - "non_appointing_parent_has_not_given_consent": ${ 'Off' if nonappointing_parent_consent else 'Yes' }
+      - "non_appointing_parent_deceased": ${ 'Yes' if (not nonappointing_parent_consent and nonappointing_parent_status == 'deceased') else 'Off' }
+      - "non_appointing_parent_whereabouts_unknown": ${ 'Yes' if (not nonappointing_parent_consent and nonappointing_parent_status == 'whereabouts unknown') else 'Off' }
+      - "non_appointing_parent_unwilling": ${ 'Yes' if (not nonappointing_parent_consent and nonappointing_parent_status == 'unwilling') else 'Off' }
+      - "non_appointing_parent_unable": ${ 'Yes' if (not nonappointing_parent_consent and nonappointing_parent_status == 'unable') else 'Off' }
+      # ---------- Page 3 ----------
+      - "user1_printed_name": ${ users[0] }
+      - "user1_phone_number": ${ users[0].phone_number }
+      - "user1_signature": ${ users[0].signature_if_final(i) }
+      - "temp_agent_acknowledgement": ${ showifdef('temp_agent_printed_name') }
+      # ---------- Page 4 ----------
+      - "temp_agent_printed_name": ${ showifdef('temp_agent_printed_name') }
+      - "temp_agent_phone_number": ${ temp_agent.phone_number if defined('temp_agent.phone_number') else '' }
+      - "temp_agent_date": ${ temp_agent_date.format() if defined('temp_agent_date') else '' }
+      - "temp_agent_signature": ${ temp_agent.signature_if_final(i) if defined('temp_agent.signature') else '' }
+      - "optional_agent_name_acknowledgment": ${ showifdef('optional_agent_printed_name') }
+      # ---------- Page 5 ----------
+      - "optional_agent_printed_name": ${ showifdef('optional_agent_printed_name') }
+      - "optional_agent_phone_number": ${ optional_agent.phone_number if defined('optional_agent.phone_number') else '' }
+      - "optional_agent_date": ${ optional_agent_date.format() if defined('optional_agent_date') else '' }
+      - "optional_agent_signature": ${ optional_agent.signature_if_final(i) if defined('optional_agent.signature') else '' }
+      - "other_parent": ${ nonappointing_parent if nonappointing_parent_consent else '' }
+      - "other_parent_address": ${ nonappointing_parent.address.on_one_line() if nonappointing_parent_consent else '' }
+      - "other_temp_agent_name": ${ showifdef('nonappointing_temp_agent') }
+      - "other_optional_agent_name": ${ showifdef('nonappointing_optional_agent') }
+      - "other_parent_name": ${ nonappointing_parent if nonappointing_parent_consent else '' }
+      - "other_parent_phone_number": ${ nonappointing_parent.phone_number if nonappointing_parent_consent else '' }
+---
+id: P
+question: |
+  P
+fields:
+  - "P": p
+  - "Width": width
+  - "Alt text": alt_text
+---
+objects:
+  - Temporary_Agent_Esp_2: ALDocument.using(filename="temporary_agent_esp", title=str(Temporary_Agent_Esp_2_attachment_title), enabled=True, has_addendum=False)
+---
+template: temporary_agent_esp_attachment_title
+content: |
+  Temporary agent esp
+---
+# Each attachment defines a key in an ALDocument. We use `i` as the placeholder here so the
+# same template is used for "preview" and "final" keys, and logic in the template checks
+# the value of `i` to show or hide the user's signature
+attachment:
+  name: temporary agent esp
+  filename: temporary_agent_esp
+  variable name: Temporary_Agent_Esp_2[i]
+  skip undefined: True
+  pdf template file: Temporary_Agent_Esp_2.pdf
+  fields:
+      - "user1_name": ${ users[0] }
+      - "user1_address": ${ user1_address }
+      - "user1_status_parent": ${ user1_status['parent'] }
+      - "user1_status_legal_guardian": ${ user1_status['legal_guardian'] }
+      - "user1_status_legal_custodian": ${ user1_status['legal_custodian'] }
+      - "temp_agent": ${ temp_agent }
+      - "temp_agent_address": ${ temp_agent_address }
+      - "child1_name": ${ children[0] }
+      - "child2_name": ${ children.item(1) }
+      - "child2_birth_date": ${ child2_birth_date.format() }
+      - "child1_birth_date": ${ child1_birth_date.format() }
+      - "child3_name": ${ children.item(2) }
+      - "child3_birth_date": ${ child3_birth_date.format() }
+      - "child4_name": ${ children.item(3) }
+      - "child4_birth_date": ${ child4_birth_date.format() }
+      - "prohibitive_acts": ${ prohibitive_acts }
+      - "optional_agent": ${ optional_agent }
+      - "optional_agent_address": ${ optional_agent_address }
+      - "non_appointing_parent_has_given_consent": ${ non_appointing_parent_has_given_consent }
+      - "non_appointing_parent_has_not_given_consent": ${ non_appointing_parent_has_not_given_consent }
+      - "non_appointing_parent_deceased": ${ non_appointing_parent['deceased'] }
+      - "non_appointing_parent_whereabouts_unknown": ${ non_appointing_parent['whereabouts_unknown'] }
+      - "non_appointing_parent_unwilling": ${ non_appointing_parent['unwilling'] }
+      - "non_appointing_parent_unable": ${ non_appointing_parent['unable'] }
+      - "user1_signature": ${ users[0].signature }
+      - "user1_printed_name": ${ user1_printed_name }
+      - "user1_phone_number": ${ users[0].phone_number }
+      - "temp_agent_acknowledgement": ${ temp_agent_acknowledgement }
+      - "temp_agent_signature": ${ temp_agent[0].signature }
+      - "temp_agent_printed_name": ${ temp_agent_printed_name }
+      - "temp_agent_phone_number": ${ temp_agent[0].phone_number }
+      - "temp_agent_date": ${ temp_agent_date.format() }
+      - "optional_agent_name_acknowledgment": ${ optional_agent_name_acknowledgment }
+      - "optional_agent_signature": ${ optional_agent[0].signature }
+      - "optional_agent_printed_name": ${ optional_agent_printed_name }
+      - "optional_agent_phone_number": ${ optional_agent[0].phone_number }
+      - "optional_agent_date": ${ optional_agent_date.format() }
+      - "other_parent": ${ other_parent }
+      - "other_parent_address": ${ other_parent_address }
+      - "other_temp_agent_name": ${ other_temp_agent_name }
+      - "other_optional_agent_name": ${ other_optional_agent_name }
+      - "other_parent_date": ${ other_parent_date.format() }
+      - "other_parent_signature": ${ other_parent[0].signature }
+      - "other_parent_name": ${ other_parent[0] }
+      - "other_parent_phone_number": ${ other_parent[0].phone_number }
+---
+objects:
+  - other_parent: ALPeopleList.using(ask_number=True,target_number=1)
+---
+id: User1
+question: |
+  User1
+fields:
+  - "User1 address": user1_address
+    maxlength: 32
+  - "User1 status": user1_status
+    datatype: checkboxes
+    choices:
+      - Parent: parent
+      - Legal guardian: legal_guardian
+      - Legal custodian: legal_custodian
+---
+id: Temp agent address
+question: |
+  Temp agent address
+fields:
+  - "Temp agent address": temp_agent_address
+    maxlength: 30
+  - "Date of child2 birth": child2_birth_date
+    datatype: date
+---
+id: Date of child1 birth
+question: |
+  Date of child1 birth
+fields:
+  - "Date of child1 birth": child1_birth_date
+    datatype: date
+  - "Date of child3 birth": child3_birth_date
+    datatype: date
+---
+id: Date of child4 birth
+question: |
+  Date of child4 birth
+fields:
+  - "Date of child4 birth": child4_birth_date
+    datatype: date
+  - "Prohibitive acts": prohibitive_acts
+    input type: area
+    maxlength: 156
+---
+id: Optional agent address
+question: |
+  Optional agent address
+fields:
+  - "Optional agent address": optional_agent_address
+    maxlength: 27
+---
+id: Non appointing parent
+question: |
+  Non appointing parent
+fields:
+  - "Non appointing parent has given consent": non_appointing_parent_has_given_consent
+    datatype: yesno
+  - "Non appointing parent has not given consent": non_appointing_parent_has_not_given_consent
+    datatype: yesno
+  - "Non appointing parent": non_appointing_parent
+    datatype: checkboxes
+    choices:
+      - Deceased: deceased
+      - Whereabouts unknown: whereabouts_unknown
+      - Unwilling: unwilling
+      - Unable: unable
+---
+id: User1 printed name
+question: |
+  User1 printed name
+fields:
+  - "User1 printed name": user1_printed_name
+    maxlength: 32
+---
+id: Temp agent
+question: |
+  Temp agent
+fields:
+- Temp agent acknowledgement: temp_agent_acknowledgement
+  maxlength: 32
+---
+id: Optional agent
+question: |
+  Optional agent
+fields:
+- Optional agent name acknowledgment: optional_agent_name_acknowledgment
+  maxlength: 31
+---
+id: Other
+question: |
+  Other
+fields:
+  - "Other parent address": other_parent_address
+    maxlength: 31
+  - "Other temp agent name": other_temp_agent_name
+    maxlength: 27
+---
+id: Other 2
+question: |
+  Other 2
+fields:
+  - "Other optional agent name": other_optional_agent_name
+    maxlength: 32
+  - "Date of other parent": other_parent_date
+    datatype: date
+---
+objects:
+  - temporary_agent_esp_2_next_steps: ALDocument.using(filename="temporary_agent_esp_2_next_steps", title=str(temporary_agent_esp_2_next_steps_attachment_title), enabled=True, has_addendum=False)
+---
+template: temporary_agent_esp_2_next_steps_attachment_title
+content: |
+  Temporary agent ESP 2 next steps
+---
+# ALWeaver DOCX template field manifest: ["al_next_steps_document_title", "al_next_steps_enabled", "al_next_steps_generate_qr_code", "al_next_steps_help_organization", "al_next_steps_help_url", "al_next_steps_intro_prompt", "al_next_steps_what_can_decision_maker_do", "al_next_steps_what_happens_if_i_win", "al_next_steps_what_happens_next", "alt_text", "p", "width"]
+# Each attachment defines a key in an ALDocument. We use `i` as the placeholder here so the
+# same template is used for "preview" and "final" keys, and logic in the template checks
+# the value of `i` to show or hide the user's signature
+attachment:
+  name: temporary agent esp 2 next steps
+  filename: temporary_agent_esp_2_next_steps
+  variable name: temporary_agent_esp_2_next_steps[i]
+  skip undefined: True
+  docx template file: temporary_agent_esp_2_next_steps.docx
+  tagged pdf: True
+---
+template: temporary_agent_esp_attachment_title
+content: |
+  Temporary agent esp
