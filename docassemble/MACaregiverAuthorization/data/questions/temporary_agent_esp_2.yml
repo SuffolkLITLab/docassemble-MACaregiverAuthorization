@@ -120,9 +120,16 @@ code: |
   nav.set_section("basic_info")
   users.gather()
   set_parts(subtitle=str(users))
+  # Eligibility check: stop the form if a court order or lost parental rights apply
+  parent_has_court_order_or_lost_rights
+  if parent_has_court_order_or_lost_rights:
+    ineligible_to_complete_screen
   parent_statements_screen
   user1_address
-  agent_statements_screen
+  # Agent age check: agent must be 18 or older
+  agent_is_18_or_older
+  if not agent_is_18_or_older:
+    agent_too_young_screen
   # "Agent Details" screen: name, address, phone and date for the temporary agent
   temp_agent_printed_name
   # The PDF uses `skip undefined: True`, so any variable that is not already
@@ -138,6 +145,13 @@ code: |
   other_optional_agent_name
   # "The other parent" screen: consent, name, address, phone and date
   non_appointing_parent_has_given_consent
+  non_appointing_parent_has_not_given_consent
+  if non_appointing_parent_has_given_consent:
+    # Other parent agreed: ask for their name, address, phone and consent date
+    other_parent_name
+  else:
+    # Other parent did not agree: ask why
+    non_appointing_parent
   set_progress(27)
   children.gather()
   for child in children:
@@ -161,14 +175,11 @@ code: |
 id: temporary_agent_form
 continue button field: temporary_agent_esp_2_intro
 question: "Temporary Agent Authorization Form"
-subquestion: |2
+subquestion: |2+
   ### Is this form right for you?
-  - Temporary Unavailability: You anticipate being temporarily unable to care for your child due to: planned medical procedures or illness, work or employment travel, family emergencies or fear of sudden separation (such as immigration enforcement).
-  - A temporary agent authorization form allows you to choose a temporary agent to care for your child for up to 60 days.
-  - The agent can make most of the choices you could make, like health care and school decisions.
-  - You can change or cancel the agreement at any time. If you do, you must tell everyone involved.
-  -You cannot use this form if a court ended your parental rights, if you signed a voluntary surrender, or if a court placed your child with someone else.
-  - Your agent cannot agree to your child’s marriage or adoption.
+  - You can use this form if you are a parent, legal guardian, or legal custodian who needs someone to care for your child while you are unable to do so. Make sure the person you choose (the agent) understands and agrees to the responsibilities.
+  - You may use this form if you expect to be temporarily unable to care for your child because of a medical procedure, illness, work-related travel, a family emergency, or fear of being separated from your child unexpectedly, such as during immigration enforcement.
+  
   
   ### What do you need to complete this form?
   - You must complete this form while two witnesses watch.
@@ -181,20 +192,35 @@ subquestion: |2
   - Have the form notarized.
   - Keep a copy for yourself and give copies to the chosen agent(s).
   
-  You can use this form if you are a parent, legal guardian, or legal custodian and need someone to act for you in your child's care. Make sure the agent knows and agrees to the responsibilities given.
+---
+id: court order or lost rights
+question: |
+  Is there a court order that stops you from giving an agent your rights and duties as a parent? Or has a court ended your parental rights, or have you signed papers giving them up?
+subquestion: |
+  Answer **Yes** if any of these is true:
+
+  * A court order says you cannot give these rights and duties to someone else.
+  * A court ended (took away) your parental rights.
+  * You signed papers giving up your parental rights.
+yesno: parent_has_court_order_or_lost_rights
+---
+id: ineligible to complete screen
+event: ineligible_to_complete_screen
+question: |
+  You are ineligible to complete this form
+buttons:
+  - Exit: exit
 ---
 id: parent statements
 continue button field: parent_statements_screen
 question: |
   Important information
-subquestion: |
+subquestion: |2
   Please read the following statements:
-
-  * There are no court orders in effect that would prohibit me from exercising or conferring the rights and responsibilities that I wish to confer upon the agent. (If you are the guardian or custodian, please attach the court order appointing you.)
-  * I confer these rights and responsibilities freely and knowingly in order to provide for the child(ren) and not as a result of pressure, threats, or payments by any person or agency.
-  * I understand that, if the affidavit is amended or revoked, I must provide the amended affidavit or revocation to all parties to whom I have provided the affidavit.
-  * This document shall take effect only if and at such time as I am detained by any law enforcement agency, removed (deported) from the United States, or if my whereabouts is not known to my agent for a 24 hour period. Proof of my detention, deportation, or unavailability may be made by a copy of government document showing my detention or deportation, through the attestation of an attorney on my behalf, or through attestation of my agent.
-  * This document shall remain in effect 60 days after it takes effect or until I notify the agent in writing that I have amended or revoked it.
+  
+  * If I change or cancel this affidavit, I must give a copy of the updated or canceled affidavit to everyone who received the original.
+  * This document only takes effect if I am detained by law enforcement, deported from the United States, or my agent does not know where I am for 24 hours. Proof of this may include a government document showing my detention or deportation, a statement from my lawyer, or a statement from my agent.
+  * This document stays in effect for 60 days after it takes effect, unless I change or cancel it in writing before then.
 ---
 id: Appointing Party Information
 question: |2
@@ -211,15 +237,25 @@ fields:
       - {"Legal custodian":"legal_custodian"}
 ---
 id: agent statements
-continue button field: agent_statements_screen
 question: |
-  Important information
+  Is the agent 18 years old or older?
+yesno: agent_is_18_or_older
+---
+id: agent too young screen
+event: agent_too_young_screen
+question: |
+  Agent is too young
 subquestion: |
-  The below statements are true and correct to the best of the Agent’s knowledge.
+  Agents must be 18 years or older to be appointed. Please provide an agent 18 years or older.
 
-  * I am at least 18 years old.
-  * I understand that I may, without obtaining further consent from a parent, legal custodian, or legal guardian of the child(ren), exercise power relative to the child(ren), except those powers prohibited above.
-  * I understand that, if the affidavit is amended or revoked, I must provide the amended affidavit or revocation to all parties to whom I have provided this affidavit prior to further exercising any rights or responsibilities under the affidavit.
+buttons:
+  - Exit: exit
+---
+id: undo agent age
+event: undo_agent_age
+code: |
+  undefine('agent_is_18_or_older')
+  response(command='refresh')
 ---
 id: Temporary Agent Details
 question: |
@@ -261,16 +297,18 @@ fields:
 id: Alternate Agent Information
 question: |2
   Optional Backup Agent
-subquestion: |2-
-  If you want a backup agent, write his or her name here. 
-  * The backup agent agrees that he or she cannot act for you until you are obtained or missing.
+subquestion: "If you want a backup agent, write his or her name here. The backup agent must agree that he or she cannot act for you until you are obtained or missing."
 fields:
-  - Name: optional_agent_printed_name
+  - label: Name
+    field: optional_agent_printed_name
+    required: False
   - label: Address
     field: optional_agent_address
     required: False
-  - Phone number: optional_agent_phone_number
+  - label: Phone number
+    field: optional_agent_phone_number
     datatype: al_international_phone
+    required: False
   - label: Acknowledgment date
     field: optional_agent_date
     datatype: date
@@ -288,44 +326,44 @@ code: |
   optional_agent.name.suffix = ''
 ---
 id: Non Appointing Parent Consent
-question: |2
+question: |
+  Did the other parent agree to you choosing an agent?
+subquestion: |
+  If you know who your child’s other parent is, tell us if that parent agreed to the agent or agents.
+yesno: non_appointing_parent_has_given_consent
+---
+# The PDF has a separate box for "has not given consent". It is always the
+# opposite of the answer above, so it is filled in automatically.
+reconsider: True
+code: |
+  non_appointing_parent_has_not_given_consent = not non_appointing_parent_has_given_consent
+---
+id: Other Parent Details
+question: |
   The other parent
-subquestion: |2-
-  If you know who your child’s other parent is, and that parent agrees to the agent or agents, write their information here.
-  
-  If that parent has not agreed, check the box that tells why.
+subquestion: |2
+  Write the other parent’s information here. (This section does not need to be completed before a notary.)
 fields:
-  - label: Consent received
-    field: non_appointing_parent_has_given_consent
-    datatype: yesno
-    required: False
-  - label: Not received
-    field: non_appointing_parent_has_not_given_consent
-    datatype: yesno
-    required: False
-  - label: Reason why consent was not received
-    field: non_appointing_parent
+  - Name: other_parent_name
+  - Address: other_parent_address
+  - Phone number: other_parent_phone_number
+    datatype: al_international_phone
+  - Date: other_parent_date
+    datatype: date
+---
+id: Other Parent No Consent Reason
+question: |
+  Why did the other parent not agree?
+subquestion: |
+  Check the box that tells why.
+fields:
+  - Reason why consent was not received: non_appointing_parent
     datatype: checkboxes
     choices:
       - {"Deceased":"deceased"}
       - {"Whereabouts unknown":"whereabouts_unknown"}
       - {"Unwilling":"unwilling"}
       - {"Unable":"unable"}
-    required: False
-  - label: Name of other parent
-    field: other_parent_name
-    required: False
-  - label: Address of other parent
-    field: other_parent_address
-    required: False
-  - label: Phone number of other parent
-    field: other_parent_phone_number
-    datatype: al_international_phone
-    required: False
-  - label: Date of other parent consent
-    field: other_parent_date
-    datatype: date
-    required: False
 ---
 # Gives the other_parent person a name (used on the signature page).
 reconsider: True
