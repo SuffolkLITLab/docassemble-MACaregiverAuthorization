@@ -7,9 +7,9 @@ include:
 ---
 metadata:
   title: >-
-    Temporary Agent Esp (2)
+    MA Temporary Agent Authorization Form
   short title: >-
-    Temporary Agent Esp (2)
+    MA Temporary Agent
   description: |-
     This form lets a parent or guardian choose a temporary agent to make decisions about the care, custody, or property of their minor child. It is important to write down any limits on the agent's power.
   can_I_use_this_form: |
@@ -120,45 +120,57 @@ code: |
   nav.set_section("basic_info")
   users.gather()
   set_parts(subtitle=str(users))
-  # Eligibility check: stop the form if a court order or lost parental rights apply
-  parent_has_court_order_or_lost_rights
-  if parent_has_court_order_or_lost_rights:
+  # Eligibility check 1: stop the form if parental rights were terminated or given away
+  parental_rights_terminated_or_given_away
+  if parental_rights_terminated_or_given_away:
+    ineligible_to_complete_screen
+  # Eligibility check 2: stop the form if a court order blocks giving these rights and duties
+  court_order_blocks_giving_rights
+  if court_order_blocks_giving_rights:
     ineligible_to_complete_screen
   parent_statements_screen
-  user1_address
-  # Agent age check: agent must be 18 or older
-  agent_is_18_or_older
-  if not agent_is_18_or_older:
-    agent_too_young_screen
-  # "Agent Details" screen: name, address, phone and date for the temporary agent
+  # "The other parent" screens (moved up): consent, then name/address/phone/date
+  # if they agreed, or the reason they did not agree.
+  non_appointing_parent_has_given_consent
+  non_appointing_parent_has_not_given_consent
+  if non_appointing_parent_has_given_consent:
+    other_parent_name
+  else:
+    non_appointing_parent
+  set_progress(14)
+  # "Your Information" screen: address, phone and parental status
+  user1_status
+  set_progress(22)
+  # Are the agent(s) completing the form with the user?
+  completing_form_with_agents
+  if not completing_form_with_agents:
+    agents_review_and_sign_later_screen
+  # "Agent Details" screen: name, address, phone and (if completing together) date.
   temp_agent_printed_name
   # The PDF uses `skip undefined: True`, so any variable that is not already
   # defined when the PDF is built is silently left blank. These lines force the
   # copied-name variables to be defined first.
   temp_agent_acknowledgement
   other_temp_agent_name
-  set_progress(14)
+  # Agent age check: agent must be 18 or older
+  agent_is_18_or_older
+  if not agent_is_18_or_older:
+    agent_too_young_screen
+  set_progress(35)
   prohibitive_acts
-  # "Optional Backup Agent" screen: name, address, phone and date
-  optional_agent_printed_name
-  optional_agent_name_acknowledgment
-  other_optional_agent_name
-  # "The other parent" screen: consent, name, address, phone and date
-  non_appointing_parent_has_given_consent
-  non_appointing_parent_has_not_given_consent
-  if non_appointing_parent_has_given_consent:
-    # Other parent agreed: ask for their name, address, phone and consent date
-    other_parent_name
-  else:
-    # Other parent did not agree: ask why
-    non_appointing_parent
-  set_progress(27)
+  set_progress(45)
+  # Backup agent: only ask for the details if the user wants one
+  add_backup_agent
+  if add_backup_agent:
+    optional_agent_printed_name
+    optional_agent_name_acknowledgment
+    other_optional_agent_name
+  set_progress(55)
   children.gather()
   for child in children:
     child.birthdate
   set_progress(68)
   set_progress(81)
-  signature_date
   # Store anonymous data for analytics / statistics
   store_variables_snapshot(
       persistent=True,
@@ -168,13 +180,14 @@ code: |
       },
   )
   temporary_agent_esp_2_preview_question
-  basic_questions_signature_flow
+  nav.set_section("signatures")
+  signature_instructions_screen
   set_progress(100)
   temporary_agent_esp_2_download
 ---
 id: temporary_agent_form
 continue button field: temporary_agent_esp_2_intro
-question: "Temporary Agent Authorization Form"
+question: "MA Temporary Agent Authorization Form"
 subquestion: |2+
   ### Is this form right for you?
   - You can use this form if you are a parent, legal guardian, or legal custodian who needs someone to care for your child while you are unable to do so. Make sure the person you choose (the agent) understands and agrees to the responsibilities.
@@ -193,23 +206,27 @@ subquestion: |2+
   - Keep a copy for yourself and give copies to the chosen agent(s).
   
 ---
-id: court order or lost rights
+---
+id: parental rights terminated or given away
 question: |
-  Is there a court order that stops you from giving an agent your rights and duties as a parent? Or has a court ended your parental rights, or have you signed papers giving them up?
+  Have your parental rights been terminated or given away?
 subquestion: |
-  Answer **Yes** if any of these is true:
-
-  * A court order says you cannot give these rights and duties to someone else.
-  * A court ended (took away) your parental rights.
-  * You signed papers giving up your parental rights.
+  Answer **Yes** if a court ended (took away) your parental rights, or if you signed papers giving up your parental rights.
 fields:
-  - no label: parent_has_court_order_or_lost_rights
+  - no label: parental_rights_terminated_or_given_away
+    datatype: yesnoradio
+---
+id: court order blocks giving rights
+question: |
+  Is there a court order that says you cannot give these rights and duties to someone else?
+fields:
+  - no label: court_order_blocks_giving_rights
     datatype: yesnoradio
 ---
 id: ineligible to complete screen
 event: ineligible_to_complete_screen
 question: |
-  You are ineligible to complete this form
+  You are ineligible to complete this form.
 buttons:
   - Exit: exit
 ---
@@ -223,111 +240,6 @@ subquestion: |2
   * If I change or cancel this affidavit, I must give a copy of the updated or canceled affidavit to everyone who received the original.
   * This document only takes effect if I am detained by law enforcement, deported from the United States, or my agent does not know where I am for 24 hours. Proof of this may include a government document showing my detention or deportation, a statement from my lawyer, or a statement from my agent.
   * This document stays in effect for 60 days after it takes effect, unless I change or cancel it in writing before then.
----
-id: Appointing Party Information
-question: |2
-  Your Information
-fields:
-  - Address: user1_address
-  - Phone number: user1_phone_number
-    datatype: al_international_phone
-  - Parental Status: user1_status
-    datatype: checkboxes
-    choices:
-      - {"Parent":"parent"}
-      - {"Legal guardian":"legal_guardian"}
-      - {"Legal custodian":"legal_custodian"}
----
-id: agent statements
-question: |
-  Is the agent 18 years old or older?
-fields:
-  - no label: agent_is_18_or_older
-    datatype: yesnoradio
----
-id: agent too young screen
-event: agent_too_young_screen
-question: |
-  Agent is too young
-subquestion: |
-  Agents must be 18 years or older to be appointed. Please provide an agent 18 years or older.
-
-buttons:
-  - Exit: exit
----
-id: undo agent age
-event: undo_agent_age
-code: |
-  undefine('agent_is_18_or_older')
-  response(command='refresh')
----
-id: Temporary Agent Details
-question: |
-  Agent Details
-subquestion: |
-  Write the name and address of the person you want to take care of your child or children. This person is called “the agent.” The agent can make any decision for your children that you could make.
-fields:
-  - Name: temp_agent_printed_name
-  - Address: temp_agent_address
-  - Phone number: temp_agent_phone_number
-    datatype: al_international_phone
-  - Acknowledgment date: temp_agent_date
-    datatype: date
----
-# The agent's name is typed once, above. These copy it to every other place the
-# form needs it, and give the temp_agent person a name for the signature page.
-# `reconsider: True` keeps the copies in sync if the name is edited later.
-reconsider: True
-code: |
-  temp_agent_acknowledgement = temp_agent_printed_name
-  other_temp_agent_name = temp_agent_printed_name
-  _temp_agent_parts = temp_agent_printed_name.strip().rsplit(' ', 1)
-  temp_agent.name.first = _temp_agent_parts[0]
-  temp_agent.name.middle = ''
-  temp_agent.name.last = _temp_agent_parts[1] if len(_temp_agent_parts) > 1 else ''
-  temp_agent.name.suffix = ''
----
-id: Not allowed Acts
-question: |
-  Not allowed Acts
-subquestion: |2
-  Write down anything you don’t want the agent to do.
-fields:
-  - label: Acts not allowed for agent
-    field: prohibitive_acts
-    datatype: area
-    required: False
----
-id: Alternate Agent Information
-question: |2
-  Optional Backup Agent
-subquestion: "If you want a backup agent, write his or her name here. The backup agent must agree that he or she cannot act for you until you are obtained or missing."
-fields:
-  - label: Name
-    field: optional_agent_printed_name
-    required: False
-  - label: Address
-    field: optional_agent_address
-    required: False
-  - label: Phone number
-    field: optional_agent_phone_number
-    datatype: al_international_phone
-    required: False
-  - label: Acknowledgment date
-    field: optional_agent_date
-    datatype: date
-    required: False
----
-# Same idea for the backup agent: one typed name fills the rest.
-reconsider: True
-code: |
-  optional_agent_name_acknowledgment = optional_agent_printed_name
-  other_optional_agent_name = optional_agent_printed_name
-  _optional_agent_parts = optional_agent_printed_name.strip().rsplit(' ', 1)
-  optional_agent.name.first = _optional_agent_parts[0]
-  optional_agent.name.middle = ''
-  optional_agent.name.last = _optional_agent_parts[1] if len(_optional_agent_parts) > 1 else ''
-  optional_agent.name.suffix = ''
 ---
 id: Non Appointing Parent Consent
 question: |
@@ -380,11 +292,216 @@ code: |
   other_parent.name.last = _other_parent_parts[1] if len(_other_parent_parts) > 1 else ''
   other_parent.name.suffix = ''
 ---
+# Shared look for the small "?" help icons used on several screens. Each screen
+# that shows a "?" repeats the css and script modifiers below.
+id: Appointing Party Information
+question: |2
+  Your Information
+subquestion: |
+  Hover over or tap the **?** next to each choice to see what it means.
+fields:
+  - code: |
+      users[0].address_fields(show_country=False)
+  - Phone number: user1_phone_number
+    datatype: al_international_phone
+  - Parental Status: user1_status
+    datatype: radio
+    choices:
+      - 'Parent <a tabindex="0" role="button" class="al-help-icon" aria-label="What does parent mean?" data-help="Someone who is legally a child&#39;s parent.">?</a>': parent
+      - 'Legal guardian <a tabindex="0" role="button" class="al-help-icon" aria-label="What does legal guardian mean?" data-help="Someone a court appoints to care for a child and make decisions for them.">?</a>': legal_guardian
+      - 'Legal custodian <a tabindex="0" role="button" class="al-help-icon" aria-label="What does legal custodian mean?" data-help="Someone who has been given the legal right to care for a child.">?</a>': legal_custodian
+sets:
+  - users[0].address.address
+  - users[0].address.unit
+  - users[0].address.city
+  - users[0].address.state
+  - users[0].address.zip
+css: |
+  <style>
+    .al-help-icon { display:inline-block; width:1.4em; height:1.4em; line-height:1.3em; margin-left:.35em; text-align:center; font-size:.8em; font-weight:700; border:1px solid currentColor; border-radius:50%; cursor:help; text-decoration:none; vertical-align:middle; }
+  </style>
+script: |
+  <script>
+    $(document).on('daPageLoad', function(){
+      $('.al-help-icon').each(function(){
+        $(this).popover({trigger: 'hover focus', placement: 'top', container: 'body', content: $(this).attr('data-help')});
+        $(this).on('click', function(e){ e.preventDefault(); e.stopPropagation(); });
+      });
+    });
+  </script>
+---
+# Plain-English label for the radio answer (used on the review screen).
+reconsider: True
+code: |
+  user1_status_label = {
+    'parent': 'Parent',
+    'legal_guardian': 'Legal guardian',
+    'legal_custodian': 'Legal custodian',
+  }.get(user1_status, '')
+---
+id: completing form with agents
+question: |
+  Are you completing this form together with your agent(s)?
+subquestion: |
+  Hover over or tap the **?** to see who each person is.
+
+  * You (the appointing party) <a tabindex="0" role="button" class="al-help-icon" aria-label="Who is the appointing party?" data-help="The parent, legal guardian, or legal custodian who is choosing someone to care for the child.">?</a>
+  * Temporary agent <a tabindex="0" role="button" class="al-help-icon" aria-label="Who is the temporary agent?" data-help="The person you choose to care for your child and make decisions for your child while you are unable to.">?</a>
+  * Backup agent (optional) <a tabindex="0" role="button" class="al-help-icon" aria-label="Who is the backup agent?" data-help="A backup person who can care for your child if the first person you choose is unavailable.">?</a>
+fields:
+  - no label: completing_form_with_agents
+    datatype: yesnoradio
+css: |
+  <style>
+    .al-help-icon { display:inline-block; width:1.4em; height:1.4em; line-height:1.3em; margin-left:.35em; text-align:center; font-size:.8em; font-weight:700; border:1px solid currentColor; border-radius:50%; cursor:help; text-decoration:none; vertical-align:middle; }
+  </style>
+script: |
+  <script>
+    $(document).on('daPageLoad', function(){
+      $('.al-help-icon').each(function(){
+        $(this).popover({trigger: 'hover focus', placement: 'top', container: 'body', content: $(this).attr('data-help')});
+        $(this).on('click', function(e){ e.preventDefault(); e.stopPropagation(); });
+      });
+    });
+  </script>
+---
+id: agents review and sign later
+continue button field: agents_review_and_sign_later_screen
+question: |
+  Important information
+subquestion: |
+  Please have the agent(s) review, date, and sign the form in front of the witnesses and notary.
+---
+id: Temporary Agent Details
+question: |
+  Agent Details
+subquestion: |
+  Write the name and address of the person you want to take care of your child or children. This person is called “the agent.” The agent can make any decision for your children that you could make.
+fields:
+  - Name: temp_agent_printed_name
+  - code: |
+      temp_agent.address_fields(show_country=False)
+  - Phone number: temp_agent_phone_number
+    datatype: al_international_phone
+  # The date only appears if the agent(s) are completing the form with the user.
+  - code: |
+      [{'label': 'Acknowledgment date', 'field': 'temp_agent_date', 'datatype': 'date'}] if completing_form_with_agents else []
+sets:
+  - temp_agent.address.address
+  - temp_agent.address.unit
+  - temp_agent.address.city
+  - temp_agent.address.state
+  - temp_agent.address.zip
+---
+# The agent's name is typed once, above. These copy it to every other place the
+# form needs it, and give the temp_agent person a name for the signature page.
+# `reconsider: True` keeps the copies in sync if the name is edited later.
+reconsider: True
+code: |
+  temp_agent_acknowledgement = temp_agent_printed_name
+  other_temp_agent_name = temp_agent_printed_name
+  _temp_agent_parts = temp_agent_printed_name.strip().rsplit(' ', 1)
+  temp_agent.name.first = _temp_agent_parts[0]
+  temp_agent.name.middle = ''
+  temp_agent.name.last = _temp_agent_parts[1] if len(_temp_agent_parts) > 1 else ''
+  temp_agent.name.suffix = ''
+---
+id: agent statements
+question: |
+  Is ${ temp_agent_printed_name } 18 years old or older?
+fields:
+  - no label: agent_is_18_or_older
+    datatype: yesnoradio
+---
+id: agent too young screen
+event: agent_too_young_screen
+question: |
+  Agent is too young
+subquestion: |
+  Agents must be 18 years or older to be appointed. Please provide an agent 18 years or older.
+
+buttons:
+  - Exit: exit
+---
+id: undo agent age
+event: undo_agent_age
+code: |
+  undefine('agent_is_18_or_older')
+  response(command='refresh')
+---
+id: Not allowed Acts
+question: |
+  Not allowed Acts
+subquestion: |2
+  Write down anything you don’t want the agent to do.
+fields:
+  - label: Acts not allowed for agent
+    field: prohibitive_acts
+    datatype: area
+    required: False
+---
+id: add backup agent
+question: |
+  Would you like to add a backup agent?
+subquestion: |
+  What is a backup agent? <a tabindex="0" role="button" class="al-help-icon" aria-label="What is a backup agent?" data-help="The optional temporary agent is a backup person who can care for your child if the first person you choose is unavailable. The backup agent must agree that he or she cannot act for you until you are detained or missing.">?</a>
+fields:
+  - no label: add_backup_agent
+    datatype: yesnoradio
+css: |
+  <style>
+    .al-help-icon { display:inline-block; width:1.4em; height:1.4em; line-height:1.3em; margin-left:.35em; text-align:center; font-size:.8em; font-weight:700; border:1px solid currentColor; border-radius:50%; cursor:help; text-decoration:none; vertical-align:middle; }
+  </style>
+script: |
+  <script>
+    $(document).on('daPageLoad', function(){
+      $('.al-help-icon').each(function(){
+        $(this).popover({trigger: 'hover focus', placement: 'top', container: 'body', content: $(this).attr('data-help')});
+        $(this).on('click', function(e){ e.preventDefault(); e.stopPropagation(); });
+      });
+    });
+  </script>
+---
+id: Alternate Agent Information
+question: |2
+  Backup Agent
+subquestion: |
+  Write the backup agent’s name, address, and phone number here. The backup agent must agree that he or she cannot act for you until you are detained or missing.
+fields:
+  - label: Name
+    field: optional_agent_printed_name
+  - label: Address
+    field: optional_agent_address
+  - label: Phone number
+    field: optional_agent_phone_number
+    datatype: al_international_phone
+  # The date only appears if the agent(s) are completing the form with the user.
+  - code: |
+      [{'label': 'Acknowledgment date', 'field': 'optional_agent_date', 'datatype': 'date'}] if completing_form_with_agents else []
+---
+# Same idea for the backup agent: one typed name fills the rest.
+reconsider: True
+code: |
+  optional_agent_name_acknowledgment = optional_agent_printed_name
+  other_optional_agent_name = optional_agent_printed_name
+  _optional_agent_parts = optional_agent_printed_name.strip().rsplit(' ', 1)
+  optional_agent.name.first = _optional_agent_parts[0]
+  optional_agent.name.middle = ''
+  optional_agent.name.last = _optional_agent_parts[1] if len(_optional_agent_parts) > 1 else ''
+  optional_agent.name.suffix = ''
+---
+id: signature choice
+continue button field: signature_instructions_screen
+question: |
+  Signing your form
+subquestion: |
+  This form should be signed in front of 2 witnesses, who cannot be your agent(s), and a notary.
+---
 id: preview temporary_agent_esp_2
 question: |
-  Preview your form before you sign it
+  Preview your form
 subquestion: |
-  Here is a preview of the form you will sign on the next page.
+  Here is a preview of your form.
 
   ${ al_recipient_bundle.as_pdf(key='preview') }
 
@@ -393,14 +510,8 @@ subquestion: |
 
   ${ action_button_html(url_action('review_temporary_agent_esp_2'), label=word('Edit answers'), color='info') }
 
-  Return to this interview tab to continue and sign your form.
+  Return to this interview tab to continue.
 continue button field: temporary_agent_esp_2_preview_question
----
-code: |
-  signature_fields = ['users[0].signature', 'temp_agent.signature', 'optional_agent.signature']
-  # A parent who has not consented (for example, a deceased parent) does not sign.
-  if non_appointing_parent_has_given_consent:
-    signature_fields.append('other_parent.signature')
 ---
 comment: |
   The questions below are copies of the questions in AssemblyLine's
@@ -469,22 +580,27 @@ review:
       % for item in users:
         * ${ item }
       % endfor
-  - Edit: user1_address
+  - Edit: user1_status
     button: |
       **Appointing Party Information**
 
-      User1 home address: ${ showifdef('user1_address') }
+      User1 home address: ${ users[0].address.on_one_line() if defined('users[0].address.address') else '' }
 
       User1 phone number: ${ showifdef('user1_phone_number') }
 
-      User1 relationship status: ${ showifdef('user1_status') }
+      User1 relationship status: ${ user1_status_label if defined('user1_status') else '' }
+  - Edit: completing_form_with_agents
+    button: |
+      **Completing the form with your agent(s)**
+
+      Completing the form with your agent(s): ${ word(yesno(completing_form_with_agents)) if defined('completing_form_with_agents') else '' }
   - Edit: temp_agent_printed_name
     button: |
       **Temporary Agent Details**
 
       Temporary agent printed name: ${ showifdef('temp_agent_printed_name') }
 
-      Temporary agent home address: ${ showifdef('temp_agent_address') }
+      Temporary agent home address: ${ temp_agent.address.on_one_line() if defined('temp_agent.address.address') else '' }
 
       Temporary agent phone number: ${ showifdef('temp_agent_phone_number') }
 
@@ -494,7 +610,13 @@ review:
       **Not allowed Acts**
 
       Acts not allowed for agent: ${ single_paragraph(prohibitive_acts) if defined('prohibitive_acts') else '' }
+  - Edit: add_backup_agent
+    button: |
+      **Backup Agent**
+
+      Add a backup agent: ${ word(yesno(add_backup_agent)) if defined('add_backup_agent') else '' }
   - Edit: optional_agent_printed_name
+    show if: add_backup_agent
     button: |
       **Alternate Agent Information**
 
@@ -642,12 +764,12 @@ attachment:
   fields:
       - "user1_name": ${ users[0] }
       - "user1_printed_name": ${ users[0] }
-      - "user1_address": ${ user1_address }
-      - "user1_status_parent": ${ user1_status['parent'] }
-      - "user1_status_legal_guardian": ${ user1_status['legal_guardian'] }
-      - "user1_status_legal_custodian": ${ user1_status['legal_custodian'] }
+      - "user1_address": ${ users[0].address.on_one_line() }
+      - "user1_status_parent": ${ user1_status == 'parent' }
+      - "user1_status_legal_guardian": ${ user1_status == 'legal_guardian' }
+      - "user1_status_legal_custodian": ${ user1_status == 'legal_custodian' }
       - "temp_agent": ${ temp_agent_printed_name }
-      - "temp_agent_address": ${ temp_agent_address }
+      - "temp_agent_address": ${ temp_agent.address.on_one_line() }
       - "child1_name": ${ children[0] }
       - "child2_name": ${ children.item(1) }
       - "child2_birth_date": ${ children.item(1).birthdate.format() }
@@ -657,32 +779,28 @@ attachment:
       - "child4_name": ${ children.item(3) }
       - "child4_birth_date": ${ children.item(3).birthdate.format() }
       - "prohibitive_acts": ${ prohibitive_acts }
-      - "optional_agent": ${ optional_agent_printed_name }
-      - "optional_agent_address": ${ optional_agent_address }
+      - "optional_agent": ${ optional_agent_printed_name if add_backup_agent else '' }
+      - "optional_agent_address": ${ optional_agent_address if add_backup_agent else '' }
       - "non_appointing_parent_has_given_consent": ${ non_appointing_parent_has_given_consent }
       - "non_appointing_parent_has_not_given_consent": ${ non_appointing_parent_has_not_given_consent }
       - "non_appointing_parent_deceased": ${ non_appointing_parent['deceased'] }
       - "non_appointing_parent_whereabouts_unknown": ${ non_appointing_parent['whereabouts_unknown'] }
       - "non_appointing_parent_unwilling": ${ non_appointing_parent['unwilling'] }
       - "non_appointing_parent_unable": ${ non_appointing_parent['unable'] }
-      - "user1_signature": ${ users[0].signature }
       - "user1_phone_number": ${ user1_phone_number }
       - "temp_agent_acknowledgement": ${ temp_agent_acknowledgement }
-      - "temp_agent_signature": ${ temp_agent.signature }
       - "temp_agent_printed_name": ${ temp_agent_printed_name }
       - "temp_agent_phone_number": ${ temp_agent_phone_number }
-      - "temp_agent_date": ${ temp_agent_date.format() }
-      - "optional_agent_name_acknowledgment": ${ optional_agent_name_acknowledgment }
-      - "optional_agent_signature": ${ optional_agent.signature }
-      - "optional_agent_printed_name": ${ optional_agent_printed_name }
-      - "optional_agent_phone_number": ${ optional_agent_phone_number }
-      - "optional_agent_date": ${ optional_agent_date.format() if optional_agent_date else '' }
+      - "temp_agent_date": ${ temp_agent_date.format() if completing_form_with_agents and defined('temp_agent_date') else '' }
+      - "optional_agent_name_acknowledgment": ${ optional_agent_name_acknowledgment if add_backup_agent else '' }
+      - "optional_agent_printed_name": ${ optional_agent_printed_name if add_backup_agent else '' }
+      - "optional_agent_phone_number": ${ optional_agent_phone_number if add_backup_agent else '' }
+      - "optional_agent_date": ${ optional_agent_date.format() if add_backup_agent and completing_form_with_agents and defined('optional_agent_date') else '' }
       - "other_parent": ${ other_parent_name or '' }
       - "other_parent_address": ${ other_parent_address }
       - "other_temp_agent_name": ${ other_temp_agent_name }
-      - "other_optional_agent_name": ${ other_optional_agent_name }
+      - "other_optional_agent_name": ${ other_optional_agent_name if add_backup_agent else '' }
       - "other_parent_date": ${ other_parent_date.format() if other_parent_date else '' }
-      - "other_parent_signature": ${ other_parent.signature }
       - "other_parent_name": ${ other_parent_name or '' }
       - "other_parent_phone_number": ${ other_parent_phone_number or '' }
 ---
