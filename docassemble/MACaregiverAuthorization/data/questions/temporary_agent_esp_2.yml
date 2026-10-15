@@ -129,7 +129,9 @@ code: |
   if court_order_blocks_giving_rights:
     ineligible_to_complete_screen
   parent_statements_screen
-  # "The other parent" screens (moved up): consent, then name/address/phone/date
+  # "Your Information" screen: address, phone and parental status
+  user1_status
+  # "The other parent" screens: consent, then name/address/phone/date
   # if they agreed, or the reason they did not agree.
   non_appointing_parent_has_given_consent
   non_appointing_parent_has_not_given_consent
@@ -138,8 +140,6 @@ code: |
   else:
     non_appointing_parent
   set_progress(14)
-  # "Your Information" screen: address, phone and parental status
-  user1_status
   set_progress(22)
   # Are the agent(s) completing the form with the user?
   completing_form_with_agents
@@ -162,9 +162,17 @@ code: |
   # Backup agent: only ask for the details if the user wants one
   add_backup_agent
   if add_backup_agent:
+    # Is the backup agent completing the form with the user?
+    completing_form_with_backup_agent
+    if not completing_form_with_backup_agent:
+      backup_agent_review_and_sign_later_screen
     optional_agent_printed_name
     optional_agent_name_acknowledgment
     other_optional_agent_name
+    # Backup agent age check: must be 18 or older
+    optional_agent_is_18_or_older
+    if not optional_agent_is_18_or_older:
+      agent_too_young_screen
   set_progress(55)
   children.gather()
   for child in children:
@@ -241,57 +249,6 @@ subquestion: |2
   * This document only takes effect if I am detained by law enforcement, deported from the United States, or my agent does not know where I am for 24 hours. Proof of this may include a government document showing my detention or deportation, a statement from my lawyer, or a statement from my agent.
   * This document stays in effect for 60 days after it takes effect, unless I change or cancel it in writing before then.
 ---
-id: Non Appointing Parent Consent
-question: |
-  Did the other parent agree to you choosing an agent?
-subquestion: |
-  If you know who your child’s other parent is, tell us if that parent agreed to the agent or agents.
-fields:
-  - no label: non_appointing_parent_has_given_consent
-    datatype: yesnoradio
----
-# The PDF has a separate box for "has not given consent". It is always the
-# opposite of the answer above, so it is filled in automatically.
-reconsider: True
-code: |
-  non_appointing_parent_has_not_given_consent = not non_appointing_parent_has_given_consent
----
-id: Other Parent Details
-question: |
-  The other parent
-subquestion: |2
-  Write the other parent’s information here. (This section does not need to be completed before a notary.)
-fields:
-  - Name: other_parent_name
-  - Address: other_parent_address
-  - Phone number: other_parent_phone_number
-    datatype: al_international_phone
-  - Date: other_parent_date
-    datatype: date
----
-id: Other Parent No Consent Reason
-question: |
-  Why did the other parent not agree?
-subquestion: |
-  Check the box that tells why.
-fields:
-  - Reason why consent was not received: non_appointing_parent
-    datatype: checkboxes
-    choices:
-      - {"Deceased":"deceased"}
-      - {"Whereabouts unknown":"whereabouts_unknown"}
-      - {"Unwilling":"unwilling"}
-      - {"Unable":"unable"}
----
-# Gives the other_parent person a name (used on the signature page).
-reconsider: True
-code: |
-  _other_parent_parts = (other_parent_name or '').strip().rsplit(' ', 1)
-  other_parent.name.first = _other_parent_parts[0]
-  other_parent.name.middle = ''
-  other_parent.name.last = _other_parent_parts[1] if len(_other_parent_parts) > 1 else ''
-  other_parent.name.suffix = ''
----
 # Shared look for the small "?" help icons used on several screens. Each screen
 # that shows a "?" repeats the css and script modifiers below.
 id: Appointing Party Information
@@ -338,6 +295,64 @@ code: |
     'legal_guardian': 'Legal guardian',
     'legal_custodian': 'Legal custodian',
   }.get(user1_status, '')
+---
+id: Non Appointing Parent Consent
+question: |
+  Did the other parent agree to you choosing an agent?
+subquestion: |
+  If you know who your child’s other parent is, tell us if that parent agreed to the agent or agents.
+fields:
+  - no label: non_appointing_parent_has_given_consent
+    datatype: yesnoradio
+---
+# The PDF has a separate box for "has not given consent". It is always the
+# opposite of the answer above, so it is filled in automatically.
+reconsider: True
+code: |
+  non_appointing_parent_has_not_given_consent = not non_appointing_parent_has_given_consent
+---
+id: Other Parent Details
+question: |
+  The other parent
+subquestion: |2
+  Write the other parent’s information here. (This section does not need to be completed before a notary.)
+fields:
+  - Name: other_parent_name
+  - code: |
+      other_parent.address_fields(show_country=False)
+  - Phone number: other_parent_phone_number
+    datatype: al_international_phone
+  - Date: other_parent_date
+    datatype: date
+sets:
+  - other_parent.address.address
+  - other_parent.address.unit
+  - other_parent.address.city
+  - other_parent.address.state
+  - other_parent.address.zip
+---
+id: Other Parent No Consent Reason
+question: |
+  Why did the other parent not agree?
+subquestion: |
+  Check the box that tells why.
+fields:
+  - Reason why consent was not received: non_appointing_parent
+    datatype: checkboxes
+    choices:
+      - {"Deceased":"deceased"}
+      - {"Whereabouts unknown":"whereabouts_unknown"}
+      - {"Unwilling":"unwilling"}
+      - {"Unable":"unable"}
+---
+# Gives the other_parent person a name (used on the signature page).
+reconsider: True
+code: |
+  _other_parent_parts = (other_parent_name or '').strip().rsplit(' ', 1)
+  other_parent.name.first = _other_parent_parts[0]
+  other_parent.name.middle = ''
+  other_parent.name.last = _other_parent_parts[1] if len(_other_parent_parts) > 1 else ''
+  other_parent.name.suffix = ''
 ---
 id: completing form with agents
 question: |
@@ -462,6 +477,20 @@ script: |
     });
   </script>
 ---
+id: completing form with backup agent
+question: |
+  Are you completing this form together with your backup agent?
+fields:
+  - no label: completing_form_with_backup_agent
+    datatype: yesnoradio
+---
+id: backup agent review and sign later
+continue button field: backup_agent_review_and_sign_later_screen
+question: |
+  Important information
+subquestion: |
+  Please have the agent(s) review, date, and sign the form in front of the witnesses and notary.
+---
 id: Alternate Agent Information
 question: |2
   Backup Agent
@@ -470,14 +499,20 @@ subquestion: |
 fields:
   - label: Name
     field: optional_agent_printed_name
-  - label: Address
-    field: optional_agent_address
+  - code: |
+      optional_agent.address_fields(show_country=False)
   - label: Phone number
     field: optional_agent_phone_number
     datatype: al_international_phone
-  # The date only appears if the agent(s) are completing the form with the user.
+  # The date only appears if the backup agent is completing the form with the user.
   - code: |
-      [{'label': 'Acknowledgment date', 'field': 'optional_agent_date', 'datatype': 'date'}] if completing_form_with_agents else []
+      [{'label': 'Acknowledgment date', 'field': 'optional_agent_date', 'datatype': 'date'}] if completing_form_with_backup_agent else []
+sets:
+  - optional_agent.address.address
+  - optional_agent.address.unit
+  - optional_agent.address.city
+  - optional_agent.address.state
+  - optional_agent.address.zip
 ---
 # Same idea for the backup agent: one typed name fills the rest.
 reconsider: True
@@ -489,6 +524,13 @@ code: |
   optional_agent.name.middle = ''
   optional_agent.name.last = _optional_agent_parts[1] if len(_optional_agent_parts) > 1 else ''
   optional_agent.name.suffix = ''
+---
+id: backup agent age
+question: |
+  Is ${ optional_agent_printed_name } 18 years old or older?
+fields:
+  - no label: optional_agent_is_18_or_older
+    datatype: yesnoradio
 ---
 id: signature choice
 continue button field: signature_instructions_screen
@@ -615,6 +657,12 @@ review:
       **Backup Agent**
 
       Add a backup agent: ${ word(yesno(add_backup_agent)) if defined('add_backup_agent') else '' }
+  - Edit: completing_form_with_backup_agent
+    show if: add_backup_agent
+    button: |
+      **Completing the form with your backup agent**
+
+      Completing the form with your backup agent: ${ word(yesno(completing_form_with_backup_agent)) if defined('completing_form_with_backup_agent') else '' }
   - Edit: optional_agent_printed_name
     show if: add_backup_agent
     button: |
@@ -622,7 +670,7 @@ review:
 
       Alternate agent printed name: ${ showifdef('optional_agent_printed_name') }
 
-      Alternate agent home address: ${ showifdef('optional_agent_address') }
+      Alternate agent home address: ${ optional_agent.address.on_one_line() if defined('optional_agent.address.address') else '' }
 
       Alternate agent phone number: ${ showifdef('optional_agent_phone_number') }
 
@@ -639,7 +687,7 @@ review:
 
       Name of other parent: ${ showifdef('other_parent_name') }
 
-      Address of other parent: ${ showifdef('other_parent_address') }
+      Address of other parent: ${ other_parent.address.on_one_line() if defined('other_parent.address.address') else '' }
 
       Phone number of other parent: ${ showifdef('other_parent_phone_number') }
 
@@ -780,7 +828,7 @@ attachment:
       - "child4_birth_date": ${ children.item(3).birthdate.format() }
       - "prohibitive_acts": ${ prohibitive_acts }
       - "optional_agent": ${ optional_agent_printed_name if add_backup_agent else '' }
-      - "optional_agent_address": ${ optional_agent_address if add_backup_agent else '' }
+      - "optional_agent_address": ${ optional_agent.address.on_one_line() if add_backup_agent and defined('optional_agent.address.address') else '' }
       - "non_appointing_parent_has_given_consent": ${ non_appointing_parent_has_given_consent }
       - "non_appointing_parent_has_not_given_consent": ${ non_appointing_parent_has_not_given_consent }
       - "non_appointing_parent_deceased": ${ non_appointing_parent['deceased'] }
@@ -795,9 +843,9 @@ attachment:
       - "optional_agent_name_acknowledgment": ${ optional_agent_name_acknowledgment if add_backup_agent else '' }
       - "optional_agent_printed_name": ${ optional_agent_printed_name if add_backup_agent else '' }
       - "optional_agent_phone_number": ${ optional_agent_phone_number if add_backup_agent else '' }
-      - "optional_agent_date": ${ optional_agent_date.format() if add_backup_agent and completing_form_with_agents and defined('optional_agent_date') else '' }
+      - "optional_agent_date": ${ optional_agent_date.format() if add_backup_agent and completing_form_with_backup_agent and defined('optional_agent_date') else '' }
       - "other_parent": ${ other_parent_name or '' }
-      - "other_parent_address": ${ other_parent_address }
+      - "other_parent_address": ${ other_parent.address.on_one_line() }
       - "other_temp_agent_name": ${ other_temp_agent_name }
       - "other_optional_agent_name": ${ other_optional_agent_name if add_backup_agent else '' }
       - "other_parent_date": ${ other_parent_date.format() if other_parent_date else '' }
