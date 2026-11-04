@@ -105,6 +105,8 @@ terms:
     Someone who has been given the legal right to care for a child.
   appointing party: |
     The parent, legal guardian, or legal custodian who is picking someone to care for the child.
+  agent: |
+    The adult you choose to take care of your child and make choices for your child while you are not able to. Your agent must be 18 or older and must agree to do this.
   temporary agent: |
     The person you choose to care for your child and make choices for your child while you are not able to.
   backup agent: |
@@ -122,9 +124,8 @@ objects:
 sections:
   - basic_info: Basic Information
   - agent_info: Agent Information
-  - case_info: Case Information
   - children_info: Children Information
-  - signatures: Signatures
+  - signatures: Print and Sign
   - submission: Submission
   - review_temporary_agent_esp_2: Review your answers
 ---
@@ -147,7 +148,8 @@ code: |
   court_order_blocks_giving_rights
   if court_order_blocks_giving_rights:
     ineligible_to_complete_screen
-  parent_statements_screen
+  # "Important information" screen: the user must check every statement
+  parent_statement_1
   # "Your Information" screen: address, phone and parental status
   user1_status
   # "The other parent" screens: consent, then name/address/phone/date
@@ -160,12 +162,15 @@ code: |
     non_appointing_parent
   set_progress(14)
   set_progress(22)
+  nav.set_section("agent_info")
   # Are the agent(s) completing the form with the user?
   completing_form_with_agents
   if not completing_form_with_agents:
     agents_review_and_sign_later_screen
-  # Notice that the agent and backup agent must be 18 or older
-  agents_age_notice_screen
+  # The agent must be 18 or older. If not, stop at a screen that says so.
+  temp_agent_is_18_or_older
+  if not temp_agent_is_18_or_older:
+    agent_must_be_adult_screen
   # "Agent Details" screen: name, address, phone and (if completing together) date.
   temp_agent_printed_name
   # The PDF uses `skip undefined: True`, so any variable that is not already
@@ -187,17 +192,14 @@ code: |
     optional_agent_name_acknowledgment
     other_optional_agent_name
   set_progress(55)
+  nav.set_section("children_info")
   children.gather()
   # Ask each child's birthdate. If the child is 18 or older, show a warning.
-  # The user can continue, or go back and fix the birthdate.
+  # The user can continue, or use the Back button to fix the birthdate.
   for child in children:
-    while True:
-      child.birthdate
-      if child.age_in_years() < 18 or child.continue_over_18:
-        break
-      # User chose to go back and edit: clear the answers and ask again
-      del child.birthdate
-      del child.continue_over_18
+    child.birthdate
+    if child.age_in_years() >= 18:
+      child.continue_over_18
   set_progress(68)
   set_progress(81)
   # Store anonymous data for analytics / statistics
@@ -212,6 +214,7 @@ code: |
   nav.set_section("signatures")
   signature_instructions_screen
   set_progress(100)
+  nav.set_section("submission")
   temporary_agent_esp_2_download
 ---
 id: temporary_agent_form
@@ -219,14 +222,14 @@ continue button field: temporary_agent_esp_2_intro
 question: "MA Temporary Agent Authorization Form"
 subquestion: |2+
   ### Is this form right for you?
-  - You can use this form if you are a {parent}, {legal guardian}, or {legal custodian} who needs someone to care for your child while you are unable to do so. Make sure the person you choose (the agent) understands and agrees to the responsibilities.
+  - You can use this form if you are a {parent}, {legal guardian}, or {legal custodian} who needs someone to care for your child while you are unable to do so. Make sure the person you choose (your {agent}) understands and agrees to the responsibilities.
   - You may use this form if you expect to be temporarily unable to care for your child because of a medical procedure, illness, work-related travel, a family emergency, or fear of being separated from your child unexpectedly, such as during immigration enforcement.
   
   
   ### What do you need to complete this form?
-  - You must complete this form while two witnesses watch.
-  - Each witness must be at least 18, and your agent cannot be one of them.
-  - Have your agent agree.
+  - Two witnesses.
+  - Each witness must be at least 18, and your {agent} cannot be one of them.
+  - Have your {agent} agree.
   - Get the other parent’s written permission if they are alive, easy to find, and able and willing to care for your child.
   
   ### When you are done
@@ -236,8 +239,8 @@ subquestion: |2+
   
 ---
 id: parental rights terminated or given away
-question: |
-  Have your parental rights been terminated or given away?
+question: |2
+  Have your parental rights been terminated?
 subquestion: |
   Answer **Yes** if a court ended (took away) your parental rights, or if you signed papers giving up your parental rights.
 fields:
@@ -251,46 +254,73 @@ fields:
   - no label: court_order_blocks_giving_rights
     datatype: yesnoradio
 ---
+# The explanation changes depending on which eligibility question stopped the user.
+# The court order question is only asked if parental rights were NOT terminated,
+# so the "else" part is only reached when the court order answer is Yes.
 id: ineligible to complete screen
 event: ineligible_to_complete_screen
 question: |
   You are ineligible to complete this form.
+subquestion: |
+  % if parental_rights_terminated_or_given_away:
+  **Why can't I use this form?**
+
+  You said your rights as a parent were taken away by a court, or you signed papers to give them up.
+
+  This form lets a parent pass their rights to care for a child to another adult for a short time. But you can only give away something you have. Since you no longer have parental rights, you cannot give them to someone else.
+
+  If you think this is a mistake, or you want to know your choices, talk to a lawyer. You can find free legal help at [masslegalhelp.org](https://www.masslegalhelp.org).
+  % else:
+  **Why can't I use this form?**
+
+  You said a judge made a court order that says you cannot give these rights and duties to someone else.
+
+  Everyone has to follow a judge's order. This form cannot change or get around what the judge decided.
+
+  If you want the order changed, you need to ask the court. A lawyer can help you. You can find free legal help at [masslegalhelp.org](https://www.masslegalhelp.org).
+  % endif
 buttons:
   - Exit: exit
 ---
 id: parent statements
-continue button field: parent_statements_screen
 question: |
   Important information
 subquestion: |2
-  Please read the following statements:
-  
-  * If I change or cancel this affidavit, I must give a copy of the updated or canceled affidavit to everyone who received the original.
-  * This document only takes effect if I am detained by law enforcement, deported from the United States, or my agent does not know where I am for 24 hours. Proof of this may include a government document showing my detention or deportation, a statement from my lawyer, or a statement from my agent.
-  * This document stays in effect for 60 days after it takes effect, unless I change or cancel it in writing before then.
+  Read each statement and check the box to show you read it.
+fields:
+  - If I change or cancel this affidavit, I must give a copy of the updated or canceled affidavit to everyone who received the original.: parent_statement_1
+    datatype: yesno
+  - "This document only takes effect if I am detained by law enforcement, deported from the United States, or my agent does not know where I am for 24 hours. Proof of this may include a government document showing my detention or deportation, a statement from my lawyer, or a statement from my agent.": parent_statement_2
+    datatype: yesno
+  - This document stays in effect for 60 days after it takes effect, unless I change or cancel it in writing before then.: parent_statement_3
+    datatype: yesno
+validation code: |
+  if not (parent_statement_1 and parent_statement_2 and parent_statement_3):
+    validation_error("Please check every box to show you read each statement.")
 ---
 id: Appointing Party Information
 question: |2
   Your Information
-subquestion: |
-  For Parental Status, are you the child's {parent}, {legal guardian}, or {legal custodian}? Tap a green word to see what it means.
+subquestion: |2
+  Are you the child's {parent}, {legal guardian}, or {legal custodian}? Tap a green word to see what it means.
 fields:
   - code: |
       users[0].address_fields(show_country=False)
   - Phone number: user1_phone_number
     datatype: al_international_phone
-  - Parental Status: user1_status
+  - Parental status: user1_status
     datatype: radio
     choices:
-      - Parent: parent
-      - Legal guardian: legal_guardian
-      - Legal custodian: legal_custodian
+      - {"Parent":"parent"}
+      - {"Legal guardian":"legal_guardian"}
+      - {"Legal custodian":"legal_custodian"}
 sets:
-  - users[0].address.address
-  - users[0].address.unit
-  - users[0].address.city
-  - users[0].address.state
-  - users[0].address.zip
+  - "users[0].address.address"
+  - "users[0].address.city"
+  - "users[0].address.zip"
+  - "users[0].address.unit"
+  - "users[0].address.state"
+  - "users[0].address.country"
 ---
 # Plain-English label for the radio answer (used on the review screen).
 reconsider: True
@@ -386,13 +416,25 @@ id: agents review and sign later
 continue button field: agents_review_and_sign_later_screen
 question: |
   Important information
-subquestion: |
-  Please have the agent(s) review, date, and sign the form in front of the witnesses and notary.
+subquestion: |2
+  Have the agent(s) review, date, and sign the form in front of the witnesses and notary.
 ---
 id: agents age notice
-continue button field: agents_age_notice_screen
 question: |
-  Your agent and backup agent must be 18 years or older.
+  Is your {agent} 18 years old or above?
+fields:
+  - no label: temp_agent_is_18_or_older
+    datatype: yesnoradio
+---
+id: agent must be an adult
+event: agent_must_be_adult_screen
+question: |
+  Your agent must be 18 years old or older. Only an adult can be a caregiver.
+subquestion: |2
+  Choose a different person who is 18 or older. If you picked the wrong answer, tap **Undo** to change it.
+back button: True
+buttons:
+  - Exit: exit
 ---
 id: Temporary Agent Details
 question: |
@@ -435,6 +477,11 @@ code: |
 id: Not allowed Acts
 question: |2
   Write down anything you don’t want the agent to do.
+subquestion: |
+  Tap the green words to {see an example}.
+terms:
+  see an example: |
+    The agent cannot change my child’s school.
 fields:
   - label: Acts not allowed for agent
     field: prohibitive_acts
@@ -461,8 +508,8 @@ id: backup agent review and sign later
 continue button field: backup_agent_review_and_sign_later_screen
 question: |
   Important information
-subquestion: |
-  Please have the agent(s) review, date, and sign the form in front of the witnesses and notary.
+subquestion: |2
+  Have the agent(s) review, date, and sign the form in front of the witnesses and notary.
 ---
 id: Alternate Agent Information
 question: |2
@@ -480,10 +527,16 @@ fields:
   - label: Phone number
     field: optional_agent_phone_number
     datatype: al_international_phone
+  - label: My backup agent is 18 years old or older.
+    field: optional_agent_is_18_or_older
+    datatype: yesno
   # The date only appears if the backup agent is completing the form with the user.
   # Today is the only date that can be picked.
   - code: |
       [{'label': '{Acknowledgement date}', 'field': 'optional_agent_date', 'datatype': 'date', 'default': today().format('yyyy-MM-dd'), 'min': today().format('yyyy-MM-dd'), 'max': today().format('yyyy-MM-dd')}] if completing_form_with_backup_agent else []
+validation code: |
+  if not optional_agent_is_18_or_older:
+    validation_error("Your backup agent must be 18 years old or older. Only an adult can be a caregiver.", field="optional_agent_is_18_or_older")
 sets:
   - optional_agent.address.address
   - optional_agent.address.unit
@@ -508,23 +561,23 @@ question: |
 subquestion: |
   The birthdate you entered shows that ${ children[i] } is ${ children[i].age_in_years() } years old. This form is for children under 18.
 
-  If the birthdate is wrong, go back and fix it. If it is right, you can still continue.
+  If the birthdate is wrong, tap **Back** to fix it. If it is right, you can still continue.
 field: children[i].continue_over_18
 buttons:
-  - Go back and edit the birthdate: False
   - Continue: True
 ---
 id: signature choice
 continue button field: signature_instructions_screen
 question: |
   Signing your form
-subquestion: |2
+subquestion: |
   Who must sign and initial this form?
-    * You
-    * Your Agent
-    * The other parent, if available
-    * Your backup agent, if you chose one
-  
+
+  - You
+  - Your Agent
+  - The other parent, if available
+  - Your backup agent, if you chose one
+
   You must sign the form in front of a notary and two witnesses. Your agent and backup agent cannot be witnesses.
 ---
 id: preview temporary_agent_esp_2
@@ -571,6 +624,13 @@ question: |
 fields:
   - no label: children.there_is_another
     datatype: yesnoradio
+---
+# Only 4 children fit on the PDF. Once 4 are entered, stop asking
+# "Is there another child?" and move on. If there are fewer than 4,
+# this block does nothing and the question above is asked as usual.
+code: |
+  if len(children) >= 4:
+    children.there_is_another = False
 ---
 id: users names
 sets:
@@ -718,7 +778,11 @@ question: |
 subquestion: |
   ${ children.table }
 
+  % if len(children) < 4:
   ${ children.add_action() }
+  % else:
+  You can list up to 4 children on this form.
+  % endif
 ---
 table: children.table
 rows: children
@@ -759,9 +823,11 @@ objects:
   - temporary_agent_esp_2_Post_interview_instructions: ALDocument.using(filename="temporary_agent_esp_2_next_steps.docx", title=str(temporary_agent_esp_2_Post_interview_instructions_title), enabled=al_next_steps_enabled, has_addendum=False)
   - temporary_agent_esp_2_attachment: ALDocument.using(filename="temporary_agent_esp_2", title=str(temporary_agent_esp_2_attachment_title), enabled=True, has_addendum=False)
 ---
-# Bundles group the ALDocuments into separate downloads, such as for court and for the user
+# Bundles group the ALDocuments into separate downloads, such as for court and for the user.
+# The family emergency packet is only in al_user_bundle, so it appears on the
+# final "All done" download screen and NOT on the "Preview your form" screen.
 objects:
-  - al_user_bundle: ALDocumentBundle.using(elements=[temporary_agent_esp_2_Post_interview_instructions, temporary_agent_esp_2_attachment], filename="temporary_agent_esp_2", enabled=True, title=str(al_user_bundle_title))
+  - al_user_bundle: ALDocumentBundle.using(elements=[temporary_agent_esp_2_Post_interview_instructions, temporary_agent_esp_2_attachment, planningforfamilyemergencypacket], filename="temporary_agent_esp_2", enabled=True, title=str(al_user_bundle_title))
   - al_recipient_bundle: ALDocumentBundle.using(elements=[temporary_agent_esp_2_attachment], filename="temporary_agent_esp_2", enabled=True, title=str(al_recipient_bundle_title))
 ---
 template: temporary_agent_esp_2_Post_interview_instructions_title
@@ -854,3 +920,20 @@ question: |
   Alt text
 fields:
   - "Alt text": alt_text
+---
+objects:
+  - planningforfamilyemergencypacket: ALDocument.using(filename="planning_for_family_emergency_packet", title=str(planningforfamilyemergencypacket_attachment_title), enabled=True, has_addendum=False)
+---
+# This name must match the title=str(...) in the objects line just above.
+template: planningforfamilyemergencypacket_attachment_title
+content: |
+  Planning for family emergency packet
+---
+# Resource packet for the user. It is handed out as-is (blank), so there is no
+# `fields:` list. The user can print it and fill it in by hand.
+attachment:
+  name: planning for family emergency packet
+  filename: planning_for_family_emergency_packet
+  variable name: planningforfamilyemergencypacket[i]
+  skip undefined: True
+  pdf template file: planning-for-family-emergency-packet.pdf
