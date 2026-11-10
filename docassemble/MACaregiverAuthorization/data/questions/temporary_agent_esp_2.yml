@@ -80,16 +80,17 @@ code: |
   # These exact-name variables drive the reusable next-steps DOCX shell and
   # are editable in Weaver's AssemblyLine settings panel.
   al_next_steps_enabled = True
-  al_next_steps_intro_prompt = 'Massachusetts Temporary Agent Form'
-  al_next_steps_title = 'Temporary Agent Form'
-  al_next_steps_document_title = 'Appointment'
-  al_next_steps_document_purpose = 'authorization'
+  # User-facing text is wrapped in word() so it can be translated later.
+  al_next_steps_intro_prompt = word('Massachusetts Temporary Agent Form')
+  al_next_steps_title = word('Temporary Agent Form')
+  al_next_steps_document_title = word('Appointment')
+  al_next_steps_document_purpose = word('authorization')
   al_next_steps_help_organization = 'Massachusetts Legal Assistance'
   al_next_steps_help_url = 'https://www.masslegalhelp.org'
   al_next_steps_generate_qr_code = False
-  al_next_steps_what_happens_next = 'After filling out the form, make sure you have all the signatures, including those of witnesses and the agent. Give copies to everyone involved and keep a copy for yourself.'
-  al_next_steps_what_can_decision_maker_do = "The decision-maker can make choices about the child's care, custody, and property within the limits you set. But they cannot agree to marriage or adoption without your clear permission."
-  al_next_steps_what_happens_if_i_win = "If your plans work out, the agent will manage the child's needs as written. If any problems come up, you can cancel the choice or change it if needed."
+  al_next_steps_what_happens_next = word('After filling out the form, make sure you have all the signatures, including those of witnesses and the agent. Give copies to everyone involved and keep a copy for yourself.')
+  al_next_steps_what_can_decision_maker_do = word("The decision-maker can make choices about the child's care, custody, and property within the limits you set. But they cannot agree to marriage or adoption without your clear permission.")
+  al_next_steps_what_happens_if_i_win = word("If your plans work out, the agent will manage the child's needs as written. If any problems come up, you can cancel the choice or change it if needed.")
 ---
 comment: |
   Interview-wide definitions. On ANY screen, put a word in curly brackets,
@@ -222,10 +223,15 @@ continue button field: temporary_agent_esp_2_intro
 question: "MA Temporary Agent Authorization Form"
 subquestion: |2+
   ### Is this form right for you?
-  - You can use this form if you are a {parent}, {legal guardian}, or {legal custodian} who needs someone to care for your child while you are unable to do so. Make sure the person you choose (your {agent}) understands and agrees to the responsibilities.
-  - You may use this form if you expect to be temporarily unable to care for your child because of a medical procedure, illness, work-related travel, a family emergency, or fear of being separated from your child unexpectedly, such as during immigration enforcement.
-  
-  
+  - You can use this form if you are a {parent}, {legal guardian}, or {legal custodian}. It lets you choose someone to care for your child if you are suddenly separated from your child. The person you choose is your {agent}. Your agent must understand and agree to the responsibilities.
+  - This form only takes effect if:
+      - you are detained by law enforcement,
+      - you are deported from the United States, or
+      - your agent does not know where you are for 24 hours.
+  - It does not take effect for other reasons, such as a medical procedure, an illness, or work travel.
+  - Once it takes effect, it lasts for 60 days, unless you change or cancel it in writing before then.
+
+
   ### What do you need to complete this form?
   - Two witnesses.
   - Each witness must be at least 18, and your {agent} cannot be one of them.
@@ -242,7 +248,9 @@ id: parental rights terminated or given away
 question: |2
   Have your parental rights been terminated?
 subquestion: |
-  Answer **Yes** if a court ended (took away) your parental rights, or if you signed papers giving up your parental rights.
+  Answer **Yes** if a court ended (took away) your parental rights.
+
+  Also answer **Yes** if you signed papers giving up your parental rights.
 fields:
   - no label: parental_rights_terminated_or_given_away
     datatype: yesnoradio
@@ -250,6 +258,10 @@ fields:
 id: court order blocks giving rights
 question: |
   Is there a court order that says you cannot give these rights and duties to someone else?
+subquestion: |
+  Answer **Yes** if a court order says you cannot give your rights and duties as a parent to someone else.
+
+  Also answer **Yes** if a court order gives custody of your child to someone else. The order does not have to use the words "you cannot give these rights."
 fields:
   - no label: court_order_blocks_giving_rights
     datatype: yesnoradio
@@ -265,15 +277,15 @@ subquestion: |
   % if parental_rights_terminated_or_given_away:
   **Why can't I use this form?**
 
-  You said your rights as a parent were taken away by a court, or you signed papers to give them up.
+  You said a court took away your rights as a parent. Or you signed papers to give them up.
 
-  This form lets a parent pass their rights to care for a child to another adult for a short time. But you can only give away something you have. Since you no longer have parental rights, you cannot give them to someone else.
+  This form lets a parent pass their rights to care for a child to another adult for a short time. But you can only give away something you have. You no longer have parental rights, so you cannot give them to someone else.
 
-  If you think this is a mistake, or you want to know your choices, talk to a lawyer. You can find free legal help at [masslegalhelp.org](https://www.masslegalhelp.org).
+  Do you think this is a mistake? Do you want to know your choices? Talk to a lawyer. You can find free legal help at [masslegalhelp.org](https://www.masslegalhelp.org).
   % else:
   **Why can't I use this form?**
 
-  You said a judge made a court order that says you cannot give these rights and duties to someone else.
+  You said there is a court order that stops you from giving these rights and duties to someone else. This includes an order that gives custody of your child to someone else.
 
   Everyone has to follow a judge's order. This form cannot change or get around what the judge decided.
 
@@ -288,11 +300,14 @@ question: |
 subquestion: |2
   Read each statement and check the box to show you read it.
 fields:
-  - If I change or cancel this affidavit, I must give a copy of the updated or canceled affidavit to everyone who received the original.: parent_statement_1
+  - label: "I may change or cancel this affidavit. If I do, I must give a copy of the updated or canceled affidavit to everyone who received the original."
+    field: parent_statement_1
     datatype: yesno
-  - "This document only takes effect if I am detained by law enforcement, deported from the United States, or my agent does not know where I am for 24 hours. Proof of this may include a government document showing my detention or deportation, a statement from my lawyer, or a statement from my agent.": parent_statement_2
+  - label: "This document only takes effect if I am detained by law enforcement, I am deported from the United States, or my agent does not know where I am for 24 hours. Proof may include a government document showing my detention or deportation. It may also be a statement from my lawyer or from my agent."
+    field: parent_statement_2
     datatype: yesno
-  - This document stays in effect for 60 days after it takes effect, unless I change or cancel it in writing before then.: parent_statement_3
+  - label: "This document stays in effect for 60 days after it takes effect. I can change or cancel it in writing before then."
+    field: parent_statement_3
     datatype: yesno
 validation code: |
   if not (parent_statement_1 and parent_statement_2 and parent_statement_3):
@@ -326,16 +341,16 @@ sets:
 reconsider: True
 code: |
   user1_status_label = {
-    'parent': 'Parent',
-    'legal_guardian': 'Legal guardian',
-    'legal_custodian': 'Legal custodian',
+    'parent': word('Parent'),
+    'legal_guardian': word('Legal guardian'),
+    'legal_custodian': word('Legal custodian'),
   }.get(user1_status, '')
 ---
 id: Non Appointing Parent Consent
 question: |
   Did the other parent agree to you choosing an agent?
 subquestion: |
-  If you know who your child’s other parent is, tell us if that parent agreed to the agent or agents.
+  Tell us if your child’s other parent agreed to the agent or agents you chose. If you do not know who the other parent is, answer **No**.
 fields:
   - no label: non_appointing_parent_has_given_consent
     datatype: yesnoradio
@@ -368,26 +383,26 @@ sets:
 ---
 id: Other Parent No Consent Reason
 question: |
-  Why did the other parent not agree?
+  Why is the other parent not giving permission?
 subquestion: |
-  Choose the reason.
+  You need the other parent's permission unless one of these is true. Choose the reason that fits.
 fields:
-  - Reason why consent was not received: non_appointing_parent
+  - Reason the other parent is not giving permission: non_appointing_parent
     datatype: radio
     choices:
-      - Deceased: deceased
-      - Whereabouts unknown: whereabouts_unknown
-      - Unwilling: unwilling
-      - Unable: unable
+      - The other parent has died: deceased
+      - I do not know where the other parent is: whereabouts_unknown
+      - The other parent is not willing to care for the child: unwilling
+      - The other parent is not able to care for the child: unable
 ---
 # Plain-English label for the no-consent reason (used on the review screen).
 reconsider: True
 code: |
   non_appointing_parent_label = {
-    'deceased': 'Deceased',
-    'whereabouts_unknown': 'Whereabouts unknown',
-    'unwilling': 'Unwilling',
-    'unable': 'Unable',
+    'deceased': word('The other parent has died'),
+    'whereabouts_unknown': word('I do not know where the other parent is'),
+    'unwilling': word('The other parent is not willing to care for the child'),
+    'unable': word('The other parent is not able to care for the child'),
   }.get(non_appointing_parent, '')
 ---
 # Gives the other_parent person a name (used on the signature page).
