@@ -889,12 +889,12 @@ attachment:
       - "temp_agent_address": ${ temp_agent.address.on_one_line() }
       - "child1_name": ${ children[0] }
       - "child2_name": ${ children.item(1) }
-      - "child2_birth_date": ${ children.item(1).birthdate.format() }
-      - "child1_birth_date": ${ children[0].birthdate.format() }
+      - "child2_birth_date": ${ children.item(1).birthdate.format("MM/dd/yyyy") }
+      - "child1_birth_date": ${ children[0].birthdate.format("MM/dd/yyyy") }
       - "child3_name": ${ children.item(2) }
-      - "child3_birth_date": ${ children.item(2).birthdate.format() }
+      - "child3_birth_date": ${ children.item(2).birthdate.format("MM/dd/yyyy") }
       - "child4_name": ${ children.item(3) }
-      - "child4_birth_date": ${ children.item(3).birthdate.format() }
+      - "child4_birth_date": ${ children.item(3).birthdate.format("MM/dd/yyyy") }
       - "prohibitive_acts": ${ prohibitive_acts }
       - "optional_agent": ${ optional_agent_printed_name if add_backup_agent else '' }
       - "optional_agent_address": ${ optional_agent.address.on_one_line() if add_backup_agent and defined('optional_agent.address.address') else '' }
