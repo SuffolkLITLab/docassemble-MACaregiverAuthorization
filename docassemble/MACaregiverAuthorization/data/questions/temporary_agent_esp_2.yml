@@ -770,7 +770,9 @@ question: |
 subquestion: |
   ${ users.table }
 
+  % if users.number_gathered() < 1:
   ${ users.add_action() }
+  % endif
 ---
 table: users.table
 rows: users
