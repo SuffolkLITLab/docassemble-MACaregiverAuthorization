@@ -1,4 +1,11 @@
 ---
+translations:
+  - FamilySpanish10_es.xlsx
+---
+include:
+  - family_spanish_words.yml
+---
+---
 include:
   - docassemble.AssemblyLine:assembly_line.yml
   - docassemble.ALAnyState:any_state.yml
@@ -46,8 +53,7 @@ metadata:
   typical_role: "unknown"
   al_weaver_version: "2.4.0"
   generated_on: "2026-10-08"
-  languages:
-    - en
+  languages: [en, es]
   jurisdiction: "NAM-US-US+MA"
   review_date: 2026-10-08
   form_titles:
@@ -77,20 +83,12 @@ code: |
 id: alweaver assemblyline settings
 initial: True
 code: |
-  # These exact-name variables drive the reusable next-steps DOCX shell and
-  # are editable in Weaver's AssemblyLine settings panel.
+  # Next-steps prose is maintained directly in the bilingual DOCX template.
   al_next_steps_enabled = True
   # User-facing text is wrapped in word() so it can be translated later.
-  al_next_steps_intro_prompt = word('Massachusetts Temporary Agent Form')
-  al_next_steps_title = word('Temporary Agent Form')
-  al_next_steps_document_title = word('Appointment')
-  al_next_steps_document_purpose = word('authorization')
   al_next_steps_help_organization = 'Massachusetts Legal Assistance'
   al_next_steps_help_url = 'https://www.masslegalhelp.org'
   al_next_steps_generate_qr_code = False
-  al_next_steps_what_happens_next = word('After filling out the form, make sure you have all the signatures, including those of witnesses and the agent. Give copies to everyone involved and keep a copy for yourself.')
-  al_next_steps_what_can_decision_maker_do = word("The decision-maker can make choices about the child's care, custody, and property within the limits you set. But they cannot agree to marriage or adoption without your clear permission.")
-  al_next_steps_what_happens_if_i_win = word("If your plans work out, the agent will manage the child's needs as written. If any problems come up, you can cancel the choice or change it if needed.")
 ---
 comment: |
   Interview-wide definitions. On ANY screen, put a word in curly brackets,
@@ -240,7 +238,7 @@ subquestion: |2+
   
   ### When you are done
   - Have the form signed by witnesses and the chosen agent.
-  - Have the form notarized.
+  - No notarization is required for this temporary-agent form.
   - Keep a copy for yourself and give copies to the chosen agent(s).
   
 ---
@@ -311,7 +309,7 @@ fields:
     datatype: yesno
 validation code: |
   if not (parent_statement_1 and parent_statement_2 and parent_statement_3):
-    validation_error("Please check every box to show you read each statement.")
+    validation_error(word("Please check every box to show you read each statement."))
 ---
 id: Appointing Party Information
 question: |2
@@ -432,7 +430,7 @@ continue button field: agents_review_and_sign_later_screen
 question: |
   Important information
 subquestion: |2
-  Have the agent(s) review, date, and sign the form in front of the witnesses and notary.
+  Have the agent(s) review, date, and sign the form. You must sign before two adult witnesses who are not your agent.
 ---
 id: agents age notice
 question: |
@@ -524,7 +522,7 @@ continue button field: backup_agent_review_and_sign_later_screen
 question: |
   Important information
 subquestion: |2
-  Have the agent(s) review, date, and sign the form in front of the witnesses and notary.
+  Have the agent(s) review, date, and sign the form. You must sign before two adult witnesses who are not your agent.
 ---
 id: Alternate Agent Information
 question: |2
@@ -551,7 +549,7 @@ fields:
       [{'label': '{Acknowledgement date}', 'field': 'optional_agent_date', 'datatype': 'date', 'default': today().format('yyyy-MM-dd'), 'min': today().format('yyyy-MM-dd'), 'max': today().format('yyyy-MM-dd')}] if completing_form_with_backup_agent else []
 validation code: |
   if not optional_agent_is_18_or_older:
-    validation_error("Your backup agent must be 18 years old or older. Only an adult can be a caregiver.", field="optional_agent_is_18_or_older")
+    validation_error(word("Your backup agent must be 18 years old or older. Only an adult can be a caregiver."), field="optional_agent_is_18_or_older")
 sets:
   - optional_agent.address.address
   - optional_agent.address.unit
@@ -593,7 +591,7 @@ subquestion: |
   - The other parent, if available
   - Your backup agent, if you chose one
 
-  You must sign the form in front of a notary and two witnesses. Your agent and backup agent cannot be witnesses.
+  You must sign the form in front of two witnesses who are at least 18. Your agent and backup agent cannot be witnesses. This form does not require notarization.
 ---
 id: preview temporary_agent_esp_2
 question: |
@@ -778,15 +776,17 @@ table: users.table
 rows: users
 columns:
   - Name: |
-      row_item.name_full() if defined("row_item.name.first") else ""
+      row_item.name_full() if row_item.name.attribute_defined('first') else ""
   - Signature: |
-      row_item.signature if defined("row_item.signature") else ""
+      row_item.signature if row_item.attribute_defined('signature') else ""
   - Phone number: |
-      row_item.phone_number if defined("row_item.phone_number") else ""
+      row_item.phone_number if row_item.attribute_defined('phone_number') else ""
 edit:
   - name.first
   - phone_number
 confirm: True
+edit header: |
+  ${ word("Actions") }
 ---
 id: edit children
 continue button field: children.revisit
@@ -805,13 +805,15 @@ table: children.table
 rows: children
 columns:
   - Name: |
-      row_item.name_full() if defined("row_item.name.first") else ""
+      row_item.name_full() if row_item.name.attribute_defined('first') else ""
   - Birthdate: |
-      row_item.birthdate if defined("row_item.birthdate") else ""
+      row_item.birthdate if row_item.attribute_defined('birthdate') else ""
 edit:
   - name.first
   - birthdate
 confirm: True
+edit header: |
+  ${ word("Actions") }
 ---
 id: download temporary_agent_esp_2
 event: temporary_agent_esp_2_download
@@ -891,12 +893,12 @@ attachment:
       - "temp_agent_address": ${ temp_agent.address.on_one_line() }
       - "child1_name": ${ children[0] }
       - "child2_name": ${ children.item(1) }
-      - "child2_birth_date": ${ children.item(1).birthdate.format("MM/dd/yyyy") }
-      - "child1_birth_date": ${ children[0].birthdate.format("MM/dd/yyyy") }
+      - "child2_birth_date": ${ children.item(1).birthdate.format("MM/dd/yyyy", language='en') }
+      - "child1_birth_date": ${ children[0].birthdate.format("MM/dd/yyyy", language='en') }
       - "child3_name": ${ children.item(2) }
-      - "child3_birth_date": ${ children.item(2).birthdate.format("MM/dd/yyyy") }
+      - "child3_birth_date": ${ children.item(2).birthdate.format("MM/dd/yyyy", language='en') }
       - "child4_name": ${ children.item(3) }
-      - "child4_birth_date": ${ children.item(3).birthdate.format("MM/dd/yyyy") }
+      - "child4_birth_date": ${ children.item(3).birthdate.format("MM/dd/yyyy", language='en') }
       - "prohibitive_acts": ${ prohibitive_acts }
       - "optional_agent": ${ optional_agent_printed_name if add_backup_agent else '' }
       - "optional_agent_address": ${ optional_agent.address.on_one_line() if add_backup_agent and defined('optional_agent.address.address') else '' }
@@ -911,17 +913,17 @@ attachment:
       - "temp_agent_acknowledgement": ${ temp_agent_acknowledgement }
       - "temp_agent_printed_name": ${ temp_agent_printed_name }
       - "temp_agent_phone_number": ${ temp_agent_phone_number }
-      - "temp_agent_date": ${ temp_agent_date.format() if completing_form_with_agents and defined('temp_agent_date') else '' }
+      - "temp_agent_date": ${ temp_agent_date.format(language='en') if completing_form_with_agents and defined('temp_agent_date') else '' }
       - "optional_agent_name_acknowledgment": ${ optional_agent_name_acknowledgment if add_backup_agent else '' }
       - "optional_agent_printed_name": ${ optional_agent_printed_name if add_backup_agent else '' }
       - "optional_agent_phone_number": ${ optional_agent_phone_number if add_backup_agent else '' }
-      - "optional_agent_date": ${ optional_agent_date.format() if add_backup_agent and completing_form_with_backup_agent and defined('optional_agent_date') else '' }
+      - "optional_agent_date": ${ optional_agent_date.format(language='en') if add_backup_agent and completing_form_with_backup_agent and defined('optional_agent_date') else '' }
       # Other parent section: only filled in if the other parent agreed.
       - "other_parent": ${ other_parent_name if non_appointing_parent_has_given_consent else '' }
       - "other_parent_address": ${ other_parent.address.on_one_line() if non_appointing_parent_has_given_consent else '' }
       - "other_temp_agent_name": ${ other_temp_agent_name if non_appointing_parent_has_given_consent else '' }
       - "other_optional_agent_name": ${ other_optional_agent_name if non_appointing_parent_has_given_consent and add_backup_agent else '' }
-      - "other_parent_date": ${ other_parent_date.format() if non_appointing_parent_has_given_consent and other_parent_date else '' }
+      - "other_parent_date": ${ other_parent_date.format(language='en') if non_appointing_parent_has_given_consent and other_parent_date else '' }
       - "other_parent_name": ${ other_parent_name if non_appointing_parent_has_given_consent else '' }
       - "other_parent_phone_number": ${ other_parent_phone_number if non_appointing_parent_has_given_consent else '' }
 ---
@@ -954,3 +956,12 @@ attachment:
   variable name: planningforfamilyemergencypacket[i]
   skip undefined: True
   pdf template file: planning-for-family-emergency-packet.pdf
+---
+language: es
+sections:
+- basic_info: Información básica
+- agent_info: Información del agente
+- children_info: Información de los menores
+- signatures: Imprimir y firmar
+- submission: Presentación
+- review_temporary_agent_esp_2: Revise sus respuestas
